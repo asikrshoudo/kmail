@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="app_name" translatable="false">Kmail</string>
     <string name="app_tagline">A mail client</string>
+
+    <string name="welcome_description">Bring the email accounts you already have into one clean, private app.</string>
+    <string name="welcome_get_started">Get started</string>
+
+    <string name="credentials_title">Add your email account</string>
+    <string name="credentials_subtitle">Use your email address and password. Some providers need an app password instead.</string>
+    <string name="credentials_email_label">Email address</string>
+    <string name="credentials_email_error">Enter a valid email address</string>
+    <string name="credentials_password_label">Password</string>
+    <string name="credentials_password_error">Enter your password</string>
+    <string name="credentials_password_show">Show</string>
+    <string name="credentials_password_hide">Hide</string>
+    <string name="credentials_continue">Continue</string>
+    <string name="credentials_scan_qr">Scan QR code</string>
+    <string name="credentials_import_file">Import configuration file</string>
+    <string name="credentials_transfer_unavailable">Moving accounts between devices is coming in a later update.</string>
+    <string name="credentials_help_description">Help</string>
+    <string name="credentials_help_title">Need help signing in?</string>
+    <string name="credentials_help_body">Kmail connects to the email account you already have. Your password is stored encrypted on this device and is sent only to your own email provider. Some providers, such as Gmail, Yahoo and iCloud, may require an app password instead of your normal password. You can create one in your provider\'s security settings.</string>
+    <string name="credentials_help_close">Got it</string>
 </resources>

@@ -45,3 +45,12 @@
 - Version comes only from `version.properties`. `versionCode = major*10000 + minor*100 + patch`, each part 0..99.
 - Single branch (`main`) for now. Test, production and release branches come near the Play Store release.
 - Release builds are not minified yet. R8 rules are added during release preparation.
+
+## Account setup (Phase 2)
+- Auto-fill uses a built-in preset table. Unknown domains get a marked guess (imap.DOMAIN 993 TLS, smtp.DOMAIN 587 STARTTLS). There is no network autodiscovery, so the email domain is not sent to a third party.
+- Presets are not verified against live servers. Gmail, Yahoo, iCloud, Fastmail and AOL need an app password. Outlook.com may need OAuth, which is not supported yet.
+- Server forms are validated by `ServerForm` before `ServerEndpoint` is built, because `ServerEndpoint` throws on bad input.
+- Passwords are held in ViewModel memory as a String while typing (Compose text fields need String). They are never put in saved state and are cleared when the setup flow ends. Process death means the password must be entered again.
+- QR and file import stay disabled until the encrypted transfer design is approved (Phase 5).
+- Hilt 1.4.0 provides `hiltViewModel()` in `androidx.hilt:hilt-lifecycle-viewmodel-compose` (package `androidx.hilt.lifecycle.viewmodel.compose`).
+- Release signing certificate SHA-256: 1b73f5733631821dafc6aa61fde5f1bedd92eb2061ab0b4d5634601f6720f6a8. The APK is v2-signed only (enough for minSdk 26).

@@ -13,8 +13,8 @@
 | 1.5 | Navigation skeleton | Passed |
 | 1.6 | Loading, empty, error components | Passed. Not used by any screen yet |
 | 1.7 | Room schema (accounts, folders, messages) | Passed. Database is not opened at runtime yet |
-| 1.8 | MailProvider interface and models | Added, verify in CI |
-| 1.9 | Docs and unit tests | Added, verify in CI |
+| 1.8 | MailProvider interface and models | Passed |
+| 1.9 | Docs and unit tests | Passed |
 
 ## Known issues and open items
 
@@ -25,9 +25,26 @@
 - Per-app language below Android 13 cannot be tested until the Settings screen exists.
 - Color contrast ratios are not measured yet.
 - The cache identity (UIDVALIDITY + UID) is IMAP-shaped. A Gmail API or Graph provider will need a remote-id column and a migration.
-- No INTERNET permission yet. It is added in Phase 2.
 - No release signing and no release build yet.
+
+## Phase 2: Account connection
+
+| Step | Content | Status |
+|------|---------|--------|
+| 2.1 | Keystore-backed credential store (AES-GCM, AAD-bound) | Passed in CI. Not tested on a device |
+| 2.2 | Server settings model, account repository | Passed in CI. Not tested on a device |
+| 2.3 | Angus Mail IMAP and SMTP connection tester, strict TLS | Passed in CI. Never run against a real server |
+| 2.4 | Deps (lifecycle, hilt viewmodel, coroutines), provider presets, server form validation | Passed in CI with 11 new unit tests. Preset values not verified against live servers |
+| 2.5 | Welcome and credentials screens | In progress |
+
+Release APK signature checked in CI: v2 scheme, CN=Kmail O=TheKami, RSA 4096.
+
+## Known issues (Phase 2)
+
+- Credentials Continue does nothing until step 2.6.
+- New strings exist in English only. `MissingTranslation` lint is ignored in `values/strings.xml` until step 2.9.
+- Start destination is Welcome until step 2.8.
 
 ## Next
 
-Phase 2: account setup, IMAP and SMTP connection, Keystore-backed credential storage.
+Step 2.6: incoming and outgoing server screens with auto-fill.
