@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
+    testImplementation(libs.junit)
 }
 
 room {
