@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -7,7 +9,7 @@ plugins {
 }
 
 // Single source of truth: version.properties (MAJOR.MINOR.PATCH, each part 0..99).
-val versionParts: List<Int> = java.util.Properties()
+val versionParts: List<Int> = Properties()
     .apply { rootProject.file("version.properties").inputStream().use { load(it) } }
     .getProperty("VERSION_NAME")
     ?.split(".")
