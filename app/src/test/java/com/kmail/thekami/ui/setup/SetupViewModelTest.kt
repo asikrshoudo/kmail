@@ -229,4 +229,15 @@ class SetupViewModelTest {
         assertNull(creator.lastDraft)
         assertNotNull(vm.connectState.value)
     }
+
+    @Test
+    fun wellKnownPortSelectsMatchingSecurity() {
+        ready()
+        vm.onServerPort(ServerSide.OUTGOING, "465")
+        assertEquals(ConnectionSecurity.SSL_TLS, vm.outgoing.value.form.security)
+        vm.onServerPort(ServerSide.OUTGOING, "587")
+        assertEquals(ConnectionSecurity.STARTTLS, vm.outgoing.value.form.security)
+        vm.onServerPort(ServerSide.OUTGOING, "2525")
+        assertEquals(ConnectionSecurity.STARTTLS, vm.outgoing.value.form.security)
+    }
 }

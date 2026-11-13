@@ -142,7 +142,16 @@ class SetupViewModel @Inject constructor(
     }
 
     fun onServerPort(side: ServerSide, value: String) = edit(side) {
-        it.copy(form = it.form.copy(port = value), errors = it.errors - ServerFormError.PORT_INVALID)
+        // Well-known ports imply a security type. The user can still change it afterwards.
+        val security = when (value.trim()) {
+            "465", "993", "995" -> ConnectionSecurity.SSL_TLS
+            "587", "143" -> ConnectionSecurity.STARTTLS
+            else -> it.form.security
+        }
+        it.copy(
+            form = it.form.copy(port = value, security = security),
+            errors = it.errors - ServerFormError.PORT_INVALID,
+        )
     }
 
     fun onServerUsername(side: ServerSide, value: String) = edit(side) {

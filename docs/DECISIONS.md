@@ -54,3 +54,6 @@
 - QR and file import stay disabled until the encrypted transfer design is approved (Phase 5).
 - Hilt 1.4.0 provides `hiltViewModel()` in `androidx.hilt:hilt-lifecycle-viewmodel-compose` (package `androidx.hilt.lifecycle.viewmodel.compose`).
 - Release signing certificate SHA-256: 1b73f5733631821dafc6aa61fde5f1bedd92eb2061ab0b4d5634601f6720f6a8. The APK is v2-signed only (enough for minSdk 26).
+- There is no provider whitelist. Any IMAP/SMTP server the user enters is used as typed. Presets only pre-fill the form.
+- TLS certificates are validated against the host name the user entered. A server whose certificate does not match that name fails with a TLS error. A "trust this certificate" option would need a separate approved design.
+- Typing a well-known port (465, 993, 995, 587, 143) selects the matching security type automatically.
