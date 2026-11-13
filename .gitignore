@@ -33,3 +33,12 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Kmail: never commit signing material or secrets
+*.jks
+*.keystore
+keystore.properties
+*.p12
+*.pem
+.env
+.env.*
