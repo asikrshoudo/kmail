@@ -5,6 +5,9 @@ ksp = "2.3.13"
 hilt = "2.60.1"
 room = "2.8.5"
 junit = "4.13.2"
+jakartaMailApi = "2.1.5"
+angusActivation = "2.0.3"
+angusMail = "2.0.5"
 composeBom = "2026.09.00"
 activityCompose = "1.13.0"
 coreKtx = "1.19.1"
@@ -25,6 +28,9 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+jakarta-mail-api = { group = "jakarta.mail", name = "jakarta.mail-api", version.ref = "jakartaMailApi" }
+angus-activation = { group = "org.eclipse.angus", name = "angus-activation", version.ref = "angusActivation" }
+angus-mail = { group = "org.eclipse.angus", name = "angus-mail", version.ref = "angusMail" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

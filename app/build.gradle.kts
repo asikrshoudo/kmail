@@ -80,6 +80,9 @@ dependencies {
 
     implementation(libs.hilt.android)
     implementation(libs.room.runtime)
+    implementation(libs.jakarta.mail.api)
+    implementation(libs.angus.mail)
+    implementation(libs.angus.activation)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
 
