@@ -57,3 +57,10 @@
 - There is no provider whitelist. Any IMAP/SMTP server the user enters is used as typed. Presets only pre-fill the form.
 - TLS certificates are validated against the host name the user entered. A server whose certificate does not match that name fails with a TLS error. A "trust this certificate" option would need a separate approved design.
 - Typing a well-known port (465, 993, 995, 587, 143) selects the matching security type automatically.
+
+## Mail provider (Phase 3)
+- `AngusMailProvider` opens one connection per operation and loads the password from the credential store each time. No long-lived connection and no IDLE yet.
+- `mail.imap.peek=true`, so fetching a message never marks it as read.
+- Header fetch leaves the snippet empty. It is filled from the body after the message is downloaded.
+- `hasAttachments` is true for `multipart/mixed`. It can be wrong for unusual messages.
+- Sent mail is not copied to the Sent folder yet. Most SMTP servers do not do it for IMAP clients.

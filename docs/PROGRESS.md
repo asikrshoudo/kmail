@@ -36,8 +36,8 @@
 | 2.3 | Angus Mail IMAP and SMTP connection tester, strict TLS | Passed in CI. Never run against a real server |
 | 2.4 | Deps (lifecycle, hilt viewmodel, coroutines), provider presets, server form validation | Passed in CI with 11 new unit tests. Preset values not verified against live servers |
 | 2.5 | Welcome and credentials screens | Passed. Credentials screen and help dialog seen on a device (dark theme). Welcome screen and error states not confirmed |
-| 2.6 | Incoming and outgoing server screens, auto-fill | In progress |
-| 2.7 | Connecting and connected screens, connection test, account saving | In progress |
+| 2.6 | Incoming and outgoing server screens, auto-fill | Passed. Seen on a device with one real account (Hostinger) |
+| 2.7 | Connecting and connected screens, connection test, account saving | Passed. IMAP and SMTP test and account save worked on a device with one real account (Hostinger) |
 
 Release APK signature checked in CI: v2 scheme, CN=Kmail O=TheKami, RSA 4096.
 
@@ -49,6 +49,12 @@ Release APK signature checked in CI: v2 scheme, CN=Kmail O=TheKami, RSA 4096.
 - Display name is the email address and the account color is automatic until Settings exist.
 - Going back to Credentials and pressing Continue again resets the server forms.
 
+## Phase 3: Core email
+
+| Step | Content | Status |
+|------|---------|--------|
+| 3.1 | IMAP and SMTP provider (folders, headers, raw message, flags, move, send) | Added, verify in CI. Never run against a real mailbox |
+
 ## Next
 
-Step 2.8: start destination logic and account list on Home. Then Phase 3: IMAP sync, reading, sending.
+Step 3.2: sync engine with Room cache, then the real inbox list.
