@@ -22,4 +22,48 @@
     <string name="credentials_help_title">Need help signing in?</string>
     <string name="credentials_help_body">Kmail connects to the email account you already have. Your password is stored encrypted on this device and is sent only to your own email provider. Some providers, such as Gmail, Yahoo and iCloud, may require an app password instead of your normal password. You can create one in your provider\'s security settings.</string>
     <string name="credentials_help_close">Got it</string>
+
+    <string name="incoming_title">Incoming server</string>
+    <string name="outgoing_title">Outgoing server</string>
+    <string name="server_host_label">Server</string>
+    <string name="server_port_label">Port</string>
+    <string name="server_security_label">Security</string>
+    <string name="server_security_tls" translatable="false">SSL/TLS</string>
+    <string name="server_security_starttls" translatable="false">STARTTLS</string>
+    <string name="server_auth_label">Authentication</string>
+    <string name="server_auth_normal">Normal password</string>
+    <string name="server_username_label">Username</string>
+    <string name="server_host_error">Enter a valid server name</string>
+    <string name="server_port_error">Enter a port from 1 to 65535</string>
+    <string name="server_username_error">Enter your username</string>
+    <string name="server_continue">Continue</string>
+    <string name="server_connect">Connect</string>
+    <string name="note_app_password">This provider usually needs an app password instead of your normal password.</string>
+    <string name="note_oauth">This provider may not accept passwords from other apps. If the connection fails, an app password or another sign-in method may be required.</string>
+    <string name="note_guessed">We guessed these settings from your email domain. Check them with your provider if the connection fails.</string>
+
+    <string name="connecting_message">Just a moment, we’re getting everything ready.</string>
+    <string name="connecting_incoming">Checking the incoming server…</string>
+    <string name="connecting_outgoing">Checking the outgoing server…</string>
+    <string name="connecting_saving">Saving your account…</string>
+    <string name="connecting_retry">Try again</string>
+    <string name="error_incoming_title">Incoming server failed</string>
+    <string name="error_outgoing_title">Outgoing server failed</string>
+    <string name="error_generic_title">Couldn’t add the account</string>
+    <string name="error_auth">The server rejected the username or password. Check them, or use an app password.</string>
+    <string name="error_tls">Couldn’t make a secure connection. Check the security type and port.</string>
+    <string name="error_timeout">The server didn’t answer in time.</string>
+    <string name="error_network">Couldn’t reach the server. Check your connection, the server name and the port.</string>
+    <string name="error_protocol">The server answered in an unexpected way. Check the port and security type.</string>
+    <string name="error_unknown">Something went wrong.</string>
+    <string name="error_invalid_input">Some settings are not valid. Go back and check them.</string>
+    <string name="error_already_exists">This account is already added.</string>
+    <string name="error_storage">Couldn’t store your password securely on this device.</string>
+
+    <string name="connected_title">You’re all set</string>
+    <string name="connected_message">%1$s is connected.</string>
+    <string name="connected_open_inbox">Open inbox</string>
+    <string name="connected_add_another">Add another account</string>
+    <string name="connected_view_folders">View folders</string>
+    <string name="connected_folders_unavailable">Folders arrive with inbox sync in a later update.</string>
 </resources>

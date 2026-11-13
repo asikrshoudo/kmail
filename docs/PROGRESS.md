@@ -35,16 +35,20 @@
 | 2.2 | Server settings model, account repository | Passed in CI. Not tested on a device |
 | 2.3 | Angus Mail IMAP and SMTP connection tester, strict TLS | Passed in CI. Never run against a real server |
 | 2.4 | Deps (lifecycle, hilt viewmodel, coroutines), provider presets, server form validation | Passed in CI with 11 new unit tests. Preset values not verified against live servers |
-| 2.5 | Welcome and credentials screens | In progress |
+| 2.5 | Welcome and credentials screens | Passed. Credentials screen and help dialog seen on a device (dark theme). Welcome screen and error states not confirmed |
+| 2.6 | Incoming and outgoing server screens, auto-fill | In progress |
+| 2.7 | Connecting and connected screens, connection test, account saving | In progress |
 
 Release APK signature checked in CI: v2 scheme, CN=Kmail O=TheKami, RSA 4096.
 
 ## Known issues (Phase 2)
 
-- Credentials Continue does nothing until step 2.6.
 - New strings exist in English only. `MissingTranslation` lint is ignored in `values/strings.xml` until step 2.9.
 - Start destination is Welcome until step 2.8.
+- Advanced server settings (spec screen 3) are not built yet.
+- Display name is the email address and the account color is automatic until Settings exist.
+- Going back to Credentials and pressing Continue again resets the server forms.
 
 ## Next
 
-Step 2.6: incoming and outgoing server screens with auto-fill.
+Step 2.8: start destination logic and account list on Home. Then Phase 3: IMAP sync, reading, sending.

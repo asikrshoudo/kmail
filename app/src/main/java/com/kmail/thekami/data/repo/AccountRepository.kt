@@ -6,6 +6,7 @@ import com.kmail.thekami.data.db.toEntity
 import com.kmail.thekami.data.security.CredentialStore
 import com.kmail.thekami.data.security.SecretUnavailableException
 import com.kmail.thekami.domain.model.Account
+import com.kmail.thekami.domain.model.AccountCreator
 import com.kmail.thekami.domain.model.AddAccountResult
 import com.kmail.thekami.domain.model.CredentialPurpose
 import com.kmail.thekami.domain.model.NewAccount
@@ -22,14 +23,14 @@ import kotlinx.coroutines.withContext
 class AccountRepository @Inject constructor(
     private val accountDao: AccountDao,
     private val credentialStore: CredentialStore,
-) {
+) : AccountCreator {
     fun observeAccounts(): Flow<List<Account>> =
         accountDao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     suspend fun getAccount(id: String): Account? = accountDao.getById(id)?.toDomain()
 
     /** Saves the account and its encrypted passwords. Leaves nothing behind if saving fails. */
-    suspend fun addAccount(draft: NewAccount): AddAccountResult {
+    override suspend fun addAccount(draft: NewAccount): AddAccountResult {
         val email = normalizeEmail(draft.emailAddress) ?: return AddAccountResult.InvalidEmail
         if (accountDao.findByEmail(email) != null) return AddAccountResult.AlreadyExists
 
