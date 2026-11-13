@@ -3,6 +3,7 @@ package com.kmail.thekami.di
 import android.content.Context
 import androidx.room.Room
 import com.kmail.thekami.data.db.AccountDao
+import com.kmail.thekami.data.db.CredentialDao
 import com.kmail.thekami.data.db.FolderDao
 import com.kmail.thekami.data.db.KmailDatabase
 import com.kmail.thekami.data.db.MessageDao
@@ -30,4 +31,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMessageDao(db: KmailDatabase): MessageDao = db.messageDao()
+
+    @Provides
+    fun provideCredentialDao(db: KmailDatabase): CredentialDao = db.credentialDao()
 }
