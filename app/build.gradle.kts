@@ -33,15 +33,8 @@ android {
         localeFilters += listOf("en", "de", "ja", "bn", "hi", "ar", "ko")
     }
 
+    // Signing values exist only in the release workflow (GitHub Secrets as env variables).
     signingConfigs {
-        getByName("debug") {
-            // Public key so every CI debug build can update the previous one. Not a secret.
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-        // Release signing comes from environment variables set only in the release workflow.
         System.getenv("KMAIL_KEYSTORE_PATH")?.let { path ->
             create("release") {
                 storeFile = file(path)
@@ -53,12 +46,15 @@ android {
     }
 
     buildTypes {
-        debug {
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
-        }
         release {
             signingConfig = signingConfigs.findByName("release")
+        }
+    }
+
+    // Angus Mail ships duplicate license files.
+    packaging {
+        resources {
+            pickFirsts += setOf("META-INF/LICENSE.md", "META-INF/NOTICE.md")
         }
     }
 

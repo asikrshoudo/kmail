@@ -5,7 +5,6 @@
 - AGP 9.5.1 with built-in Kotlin. Compose compiler plugin pinned to 2.3.21.
 - Hilt 2.60.1 and Room 2.8.5 through KSP 2.3.13.
 - compileSdk and targetSdk 37, minSdk 26.
-- Debug builds use the `.debug` application id suffix.
 - Dependency versions live only in `gradle/libs.versions.toml`.
 
 ## Security
@@ -38,4 +37,11 @@
 - Release signing key lives only in GitHub Secrets (`KMAIL_KEYSTORE_B64`, `KMAIL_KEYSTORE_PASSWORD`, `KMAIL_KEY_ALIAS`, `KMAIL_KEY_PASSWORD`). It is never committed. Back it up outside GitHub.
 - Release builds run only from `release.yml` (manual or `v*` tag), never for pull requests.
 - Version comes only from `version.properties`. `versionCode = major*10000 + minor*100 + patch`, each part 0..99.
+- Release builds are not minified yet. R8 rules are added during release preparation.
+
+## Signing, versioning, releases
+- Only release builds exist. Every push to `main` runs `release.yml`: unit tests, signed APK and AAB, and a GitHub pre-release `v<version>-build.<run>` with the APK.
+- The signing key lives only in GitHub Secrets (`KMAIL_KEYSTORE_B64`, `KMAIL_KEYSTORE_PASSWORD`, `KMAIL_KEY_ALIAS`, `KMAIL_KEY_PASSWORD`) and is never committed. Back it up outside GitHub.
+- Version comes only from `version.properties`. `versionCode = major*10000 + minor*100 + patch`, each part 0..99.
+- Single branch (`main`) for now. Test, production and release branches come near the Play Store release.
 - Release builds are not minified yet. R8 rules are added during release preparation.

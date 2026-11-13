@@ -1,12 +1,16 @@
-name: Release build
+name: Release
 
 on:
-  workflow_dispatch:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release:
@@ -37,7 +41,13 @@ jobs:
           test -n "$KEYSTORE_B64" || { echo "KMAIL_KEYSTORE_B64 secret is missing"; exit 1; }
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kmail-release.jks"
 
-      - name: Build signed release APK and AAB
+      - name: Read version
+        id: version
+        run: |
+          NAME=$(grep '^VERSION_NAME=' version.properties | cut -d= -f2)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Test and build signed release APK and AAB
         env:
           KMAIL_KEYSTORE_PATH: ${{ runner.temp }}/kmail-release.jks
           KMAIL_KEYSTORE_PASSWORD: ${{ secrets.KMAIL_KEYSTORE_PASSWORD }}
@@ -57,9 +67,21 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: kmail-release
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/bundle/release/*.aab
+          name: kmail-aab
+          path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          cp "$APK" "kmail-${VERSION_NAME}-build${RUN_NUMBER}.apk"
+          gh release create "v${VERSION_NAME}-build.${RUN_NUMBER}" \
+            --target "$GITHUB_SHA" --prerelease --generate-notes \
+            --title "Kmail ${VERSION_NAME} (build ${RUN_NUMBER})" \
+            "kmail-${VERSION_NAME}-build${RUN_NUMBER}.apk"
