@@ -51,3 +51,10 @@ jobs:
           gradle --no-daemon -q buildEnvironment \
             | grep -E "kotlin-gradle-plugin|symbol-processing-gradle-plugin|hilt-android-gradle-plugin" \
             | sort -u || true
+
+      - name: Print resolved plugin versions
+        if: always()
+        run: |
+          gradle --no-daemon -q buildEnvironment \
+            | grep -E "kotlin-gradle-plugin|symbol-processing-gradle-plugin|hilt-android-gradle-plugin" \
+            | sort -u || true
