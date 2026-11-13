@@ -17,6 +17,10 @@ android {
         versionName = "0.1.0"
     }
 
+    androidResources {
+        localeFilters += listOf("en", "de", "ja", "bn", "hi", "ar", "ko")
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -37,6 +41,7 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.foundation)
