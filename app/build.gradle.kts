@@ -6,6 +6,17 @@ plugins {
     alias(libs.plugins.room)
 }
 
+// Single source of truth: version.properties (MAJOR.MINOR.PATCH, each part 0..99).
+val versionParts: List<Int> = java.util.Properties()
+    .apply { rootProject.file("version.properties").inputStream().use { load(it) } }
+    .getProperty("VERSION_NAME")
+    ?.split(".")
+    ?.map { it.toInt() }
+    ?: error("VERSION_NAME missing in version.properties")
+require(versionParts.size == 3 && versionParts.all { it in 0..99 }) {
+    "VERSION_NAME must be MAJOR.MINOR.PATCH with each part between 0 and 99"
+}
+
 android {
     namespace = "com.kmail.thekami"
     compileSdk = 37
@@ -14,18 +25,40 @@ android {
         applicationId = "com.kmail.thekami"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = versionParts[0] * 10_000 + versionParts[1] * 100 + versionParts[2]
+        versionName = versionParts.joinToString(".")
     }
 
     androidResources {
         localeFilters += listOf("en", "de", "ja", "bn", "hi", "ar", "ko")
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Public key so every CI debug build can update the previous one. Not a secret.
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+        // Release signing comes from environment variables set only in the release workflow.
+        System.getenv("KMAIL_KEYSTORE_PATH")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("KMAIL_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KMAIL_KEY_ALIAS")
+                keyPassword = System.getenv("KMAIL_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+        }
+        release {
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
@@ -53,6 +86,7 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
+
     testImplementation(libs.junit)
 }
 

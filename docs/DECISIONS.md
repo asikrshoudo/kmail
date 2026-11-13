@@ -32,3 +32,10 @@
 - Encrypt the whole database (SQLCipher) in Phase 5.
 - Commit a Gradle wrapper later.
 - Kotlin 2.4.x only after Hilt and KSP are verified against it.
+
+## Signing and versioning
+- Debug builds are signed with a public debug keystore (`app/debug.keystore`) so each CI debug APK updates the previous one.
+- Release signing key lives only in GitHub Secrets (`KMAIL_KEYSTORE_B64`, `KMAIL_KEYSTORE_PASSWORD`, `KMAIL_KEY_ALIAS`, `KMAIL_KEY_PASSWORD`). It is never committed. Back it up outside GitHub.
+- Release builds run only from `release.yml` (manual or `v*` tag), never for pull requests.
+- Version comes only from `version.properties`. `versionCode = major*10000 + minor*100 + patch`, each part 0..99.
+- Release builds are not minified yet. R8 rules are added during release preparation.

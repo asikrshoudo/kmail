@@ -51,3 +51,6 @@ keystore.properties
 *.pem
 .env
 .env.*
+
+# Public debug key, intentionally committed (not a secret)
+!app/debug.keystore

@@ -1,0 +1,65 @@
+name: Release build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.6.0"
+          cache-provider: basic
+
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.KMAIL_KEYSTORE_B64 }}
+        run: |
+          test -n "$KEYSTORE_B64" || { echo "KMAIL_KEYSTORE_B64 secret is missing"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kmail-release.jks"
+
+      - name: Build signed release APK and AAB
+        env:
+          KMAIL_KEYSTORE_PATH: ${{ runner.temp }}/kmail-release.jks
+          KMAIL_KEYSTORE_PASSWORD: ${{ secrets.KMAIL_KEYSTORE_PASSWORD }}
+          KMAIL_KEY_ALIAS: ${{ secrets.KMAIL_KEY_ALIAS }}
+          KMAIL_KEY_PASSWORD: ${{ secrets.KMAIL_KEY_PASSWORD }}
+        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleRelease bundleRelease
+
+      - name: Show signing certificate
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/*.apk \
+            | grep -E "Signer #1 certificate (DN|SHA-256)"
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/kmail-release.jks"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kmail-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
