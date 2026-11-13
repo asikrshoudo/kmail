@@ -42,3 +42,12 @@ keystore.properties
 *.pem
 .env
 .env.*
+
+# Kmail: never commit signing material or secrets
+*.jks
+*.keystore
+keystore.properties
+*.p12
+*.pem
+.env
+.env.*
