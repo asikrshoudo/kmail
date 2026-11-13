@@ -14,6 +14,9 @@ interface AccountDao {
     @Query("SELECT * FROM accounts WHERE id = :id")
     suspend fun getById(id: String): AccountEntity?
 
+    @Query("SELECT * FROM accounts WHERE emailAddress = :email COLLATE NOCASE")
+    suspend fun findByEmail(email: String): AccountEntity?
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(account: AccountEntity)
 
