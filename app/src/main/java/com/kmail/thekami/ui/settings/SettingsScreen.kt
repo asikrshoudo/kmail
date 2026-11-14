@@ -2,6 +2,9 @@ package com.kmail.thekami.ui.settings
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.os.Build
+import androidx.annotation.StringRes
+import com.kmail.thekami.ui.theme.ThemeMode
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -67,6 +70,8 @@ fun SettingsScreen(
 ) {
     val accounts by vm.accounts.collectAsStateWithLifecycle()
     val lock by vm.lock.collectAsStateWithLifecycle()
+    val appearance by vm.appearance.collectAsStateWithLifecycle()
+    val sync by vm.sync.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
@@ -115,6 +120,47 @@ fun SettingsScreen(
                 }
             }
             TextButton(onClick = onAddAccount) { Text(stringResource(R.string.home_add_account)) }
+            HorizontalDivider()
+
+            SectionTitle(stringResource(R.string.settings_appearance))
+            Text(stringResource(R.string.appearance_theme), style = MaterialTheme.typography.bodyLarge)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    ThemeMode.System to R.string.appearance_system,
+                    ThemeMode.Light to R.string.appearance_light,
+                    ThemeMode.Dark to R.string.appearance_dark,
+                ).forEach { (mode, label) ->
+                    FilterChip(
+                        selected = appearance.mode == mode,
+                        onClick = { vm.setThemeMode(mode) },
+                        label = { Text(stringResource(label)) },
+                    )
+                }
+            }
+            SwitchRow(R.string.appearance_amoled, R.string.appearance_amoled_desc, appearance.amoled, vm::setAmoled)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                SwitchRow(R.string.appearance_dynamic, R.string.appearance_dynamic_desc, appearance.dynamicColor, vm::setDynamicColor)
+            }
+            HorizontalDivider()
+
+            SectionTitle(stringResource(R.string.settings_sync))
+            SwitchRow(R.string.settings_bg_sync, R.string.settings_bg_sync_desc, sync.backgroundSync, vm::setBackgroundSync)
+            if (sync.backgroundSync) {
+                Text(stringResource(R.string.settings_interval), style = MaterialTheme.typography.bodyLarge)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(15, 30, 60).forEach { minutes ->
+                        FilterChip(
+                            selected = sync.intervalMinutes == minutes,
+                            onClick = { vm.setInterval(minutes) },
+                            label = { Text(stringResource(R.string.settings_interval_minutes, minutes)) },
+                        )
+                    }
+                }
+            }
+            SwitchRow(R.string.settings_notifications, null, sync.notifications, vm::setNotifications)
+            if (sync.notifications) {
+                SwitchRow(R.string.settings_hide_content, null, sync.hideContent, vm::setHideContent)
+            }
             HorizontalDivider()
 
             SectionTitle(stringResource(R.string.settings_privacy))
@@ -312,4 +358,26 @@ private fun PinDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.compose_discard_keep)) } },
     )
+}
+
+@Composable
+private fun SwitchRow(
+    @StringRes title: Int,
+    @StringRes description: Int?,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
+            if (description != null) {
+                Text(
+                    stringResource(description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
 }

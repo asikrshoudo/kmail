@@ -10,7 +10,13 @@ import com.kmail.thekami.data.security.AppLockStore
 import com.kmail.thekami.data.security.PinPolicy
 import com.kmail.thekami.data.security.PinVerify
 import com.kmail.thekami.domain.model.Account
+import com.kmail.thekami.sync.SyncPrefs
+import com.kmail.thekami.sync.SyncScheduler
+import com.kmail.thekami.sync.SyncSettings
 import com.kmail.thekami.ui.lock.Biometric
+import com.kmail.thekami.ui.theme.Appearance
+import com.kmail.thekami.ui.theme.AppearanceStore
+import com.kmail.thekami.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -37,12 +43,18 @@ class SettingsViewModel @Inject constructor(
     private val store: AppLockStore,
     private val manager: AppLockManager,
     private val cache: MessageBodyCache,
+    private val appearanceStore: AppearanceStore,
+    private val syncPrefs: SyncPrefs,
+    private val scheduler: SyncScheduler,
 ) : ViewModel() {
 
     /** Null until the first load, so "no accounts" can be told apart from "not loaded yet". */
     val accounts: StateFlow<List<Account>?> = accountRepository.observeAccounts()
         .map<List<Account>, List<Account>?> { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val appearance: StateFlow<Appearance> = appearanceStore.state
+    val sync: StateFlow<SyncSettings> = syncPrefs.state
 
     private val _lock = MutableStateFlow(readLock())
     val lock: StateFlow<LockUi> = _lock.asStateFlow()
@@ -57,6 +69,29 @@ class SettingsViewModel @Inject constructor(
         biometricAvailable = Biometric.isAvailable(context),
         autoLockSeconds = store.autoLockSeconds,
     )
+
+    // ---- appearance ----
+
+    fun setThemeMode(mode: ThemeMode) = appearanceStore.update { it.copy(mode = mode) }
+    fun setAmoled(on: Boolean) = appearanceStore.update { it.copy(amoled = on) }
+    fun setDynamicColor(on: Boolean) = appearanceStore.update { it.copy(dynamicColor = on) }
+
+    // ---- sync and notifications ----
+
+    fun setBackgroundSync(on: Boolean) {
+        syncPrefs.update { it.copy(backgroundSync = on) }
+        scheduler.apply()
+    }
+
+    fun setInterval(minutes: Int) {
+        syncPrefs.update { it.copy(intervalMinutes = minutes) }
+        scheduler.apply()
+    }
+
+    fun setNotifications(on: Boolean) = syncPrefs.update { it.copy(notifications = on) }
+    fun setHideContent(on: Boolean) = syncPrefs.update { it.copy(hideContent = on) }
+
+    // ---- app lock ----
 
     suspend fun enableLock(pin: String, confirm: String): PinSetResult {
         when (PinPolicy.check(pin)) {

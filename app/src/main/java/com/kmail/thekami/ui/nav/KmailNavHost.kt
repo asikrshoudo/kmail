@@ -1,6 +1,13 @@
 package com.kmail.thekami.ui.nav
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -186,6 +193,16 @@ fun KmailNavHost(
         }
 
         composable(Routes.HOME) {
+            val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+            val homeContext = LocalContext.current
+            LaunchedEffect(Unit) {
+                if (Build.VERSION.SDK_INT >= 33 &&
+                    ContextCompat.checkSelfPermission(homeContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                    appStart.takeNotificationPrompt()
+                ) {
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
             HomeScreen(
                 onOpenMessage = { navController.navigate(Routes.reader(it)) },
                 onCompose = { navController.navigate(Routes.compose("new", -1L)) },

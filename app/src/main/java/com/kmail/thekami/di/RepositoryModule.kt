@@ -20,4 +20,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindLockConfig(impl: com.kmail.thekami.data.security.AppLockStore): com.kmail.thekami.data.security.LockConfig
+
+    @Binds
+    abstract fun bindNewMailNotifier(impl: com.kmail.thekami.sync.AndroidMailNotifier): com.kmail.thekami.sync.NewMailNotifier
 }

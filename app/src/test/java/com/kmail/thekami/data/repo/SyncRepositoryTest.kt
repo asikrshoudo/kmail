@@ -80,6 +80,9 @@ internal class FakeMessageDao : MessageDao {
     override fun observeUnifiedInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
     override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
+    override suspend fun maxId(): Long = rows.maxOfOrNull { it.id } ?: 0L
+    override suspend fun newUnreadInbox(afterId: Long): List<MessageEntity> =
+        rows.filter { it.id > afterId && !it.isRead && it.removedAtMillis == null }
     override suspend fun updateSnippet(id: Long, snippet: String) {}
 }
 

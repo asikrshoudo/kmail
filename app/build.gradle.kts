@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.jsoup)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.work.runtime)
 
     implementation(libs.hilt.android)
     implementation(libs.room.runtime)

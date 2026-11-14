@@ -69,4 +69,14 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE id IN (:ids)")
     suspend fun getByIds(ids: List<Long>): List<MessageEntity>
+
+    @Query("SELECT COALESCE(MAX(id), 0) FROM messages")
+    suspend fun maxId(): Long
+
+    @Query(
+        "SELECT m.* FROM messages m JOIN folders f ON f.id = m.folderId " +
+            "WHERE f.role = 'INBOX' AND m.id > :afterId AND m.isRead = 0 AND m.removedAtMillis IS NULL " +
+            "AND m.uidValidity = f.uidValidity ORDER BY m.receivedAtMillis DESC",
+    )
+    suspend fun newUnreadInbox(afterId: Long): List<MessageEntity>
 }

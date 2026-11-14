@@ -109,6 +109,16 @@ Known issues (settings and lock):
 - The privacy policy URL in strings.xml (settings_privacy_url) must point to a real page. `docs/PRIVACY_POLICY.md` is the text; CONTACT_EMAIL must be replaced.
 - The TheKami logo asset has not been supplied. Settings shows the text "TheKami" and the version.
 
+Step 5.1 on a device: App Lock with PIN and fingerprint worked in a manual test.
+
+Steps 6.1 and 6.2 (Appearance: theme, AMOLED, dynamic color; background sync with WorkManager; new-mail notifications): added, verify in CI and on a device.
+
+Known issues (sync and notifications):
+- Background sync is periodic (15 minutes at best) and Android may delay it. There is no push or IMAP IDLE.
+- Tapping a notification opens the app, not the message.
+- Notifications use one channel; no per-account settings, sound or quiet hours yet.
+- A new-mail notification is skipped for an inbox that was never synced before.
+
 ## Next
 
-Release preparation: app icon, Play Store listing, data safety answers, internal testing track.
+Swipe actions, load more, server-side deletions and flag sync, drafts autosave, app icon, translations.
