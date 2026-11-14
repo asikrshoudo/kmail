@@ -67,3 +67,10 @@
 - Start destination is chosen once at launch from the saved accounts (Home or Welcome).
 - Sync runs on Home open and on pull to refresh. Inbox only at first, other folders when opened. Sync is serialized per account and per folder.
 - Unified inbox shows messages of every account's INBOX folder, joined on the folder's current UIDVALIDITY.
+
+## Reader (Phase 3)
+- jsoup `Safelist` sanitizes HTML. Scripts, forms, frames, event handlers, `javascript:` links and SVG data images are removed. Styles are kept. CSS `url()`, `@import`, `expression()` and fixed positioning are removed.
+- Remote images are blocked by default, by the sanitizer, by a CSP meta tag and by `WebView.blockNetworkLoads`. The user can allow them per message.
+- WebView has JavaScript off and no file or content access. Link taps open a confirmation dialog that shows the full URL. Only http, https, mailto and tel are offered.
+- `MimeParser` never calls `Part.getContent()`. It reads decoded streams and chooses the charset itself, so it does not depend on the activation mailcap registry.
+- No verified-sender badge is shown, since no authentication result is checked.

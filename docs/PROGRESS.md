@@ -64,6 +64,17 @@ Known issues (Phase 3):
 - Tapping a message does nothing yet. There is no compose button yet.
 - Search filters the loaded list only. It does not search the server.
 
+Step 3.3 (message reader: MIME parser, HTML sanitizer, WebView, attachments): added, verify in CI and on a device.
+
+Known issues (reader):
+- Opening a message needs the network. Bodies are cached in memory only.
+- Reply, forward, star, archive and delete are not in the reader yet.
+- Quoted replies are not collapsed.
+- The email page is always white, also in dark theme.
+- Attachments are held in memory and saved through the system file picker. Large attachments are not streamed.
+- The list preview is filled only for messages that were opened.
+- HTML sanitizer and MIME parser are tested with unit tests only, not with a wide set of real emails.
+
 ## Next
 
-Step 3.3: reading a message (MIME parsing, sanitized HTML), then compose and send.
+Step 3.4: compose, send, save to Sent, reply and forward.

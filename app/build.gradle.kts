@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.jsoup)
 
     implementation(libs.hilt.android)
     implementation(libs.room.runtime)

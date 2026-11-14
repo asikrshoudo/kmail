@@ -73,6 +73,8 @@ private class FakeMessageDao : MessageDao {
         rows.filter { it.folderId == folderId && it.uidValidity == uidValidity }.maxOfOrNull { it.uid }
     override fun observeInFolder(folderId: Long, limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeUnifiedInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
+    override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
+    override suspend fun updateSnippet(id: Long, snippet: String) {}
 }
 
 private class FakeProvider : MailProvider {

@@ -2,6 +2,7 @@ package com.kmail.thekami.ui.home
 
 import android.text.format.DateFormat
 import android.text.format.DateUtils
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onAddAccount: () -> Unit,
+    onOpenMessage: (Long) -> Unit,
     modifier: Modifier = Modifier,
     vm: HomeViewModel = hiltViewModel(),
 ) {
@@ -173,7 +175,7 @@ fun HomeScreen(
                                 }
                             }
                         } else {
-                            items(state.messages, key = { it.id }) { MessageRow(it) }
+                            items(state.messages, key = { it.id }) { MessageRow(it, onClick = { onOpenMessage(it.id) }) }
                         }
                     }
                 }
@@ -266,11 +268,11 @@ private fun formatTime(millis: Long): String {
 }
 
 @Composable
-private fun MessageRow(item: MessageItem, modifier: Modifier = Modifier) {
+private fun MessageRow(item: MessageItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val weight = if (item.isRead) FontWeight.Normal else FontWeight.Bold
     val initial = item.sender.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Surface(

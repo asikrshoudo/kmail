@@ -60,4 +60,10 @@ interface MessageDao {
             "ORDER BY m.receivedAtMillis DESC, m.uid DESC LIMIT :limit",
     )
     fun observeUnifiedInbox(limit: Int): Flow<List<MessageEntity>>
+
+    @Query("SELECT * FROM messages WHERE id = :id")
+    suspend fun getById(id: Long): MessageEntity?
+
+    @Query("UPDATE messages SET snippet = :snippet WHERE id = :id")
+    suspend fun updateSnippet(id: Long, snippet: String)
 }

@@ -14,6 +14,9 @@ import androidx.navigation.compose.rememberNavController
 import com.kmail.thekami.R
 import com.kmail.thekami.ui.components.LoadingState
 import com.kmail.thekami.ui.home.HomeScreen
+import com.kmail.thekami.ui.reader.ReaderScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.kmail.thekami.ui.setup.ConnectState
 import com.kmail.thekami.ui.setup.ConnectedScreen
 import com.kmail.thekami.ui.setup.ConnectingScreen
@@ -135,8 +138,16 @@ fun KmailNavHost(
             )
         }
 
+        composable(
+            Routes.READER,
+            arguments = listOf(navArgument("messageId") { type = NavType.LongType }),
+        ) {
+            ReaderScreen(onBack = { navController.popBackStack() })
+        }
+
         composable(Routes.HOME) {
             HomeScreen(
+                onOpenMessage = { navController.navigate(Routes.reader(it)) },
                 onAddAccount = {
                     vm.startNewAccount()
                     navController.navigate(Routes.CREDENTIALS)
