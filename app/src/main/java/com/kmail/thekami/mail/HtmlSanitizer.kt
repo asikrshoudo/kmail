@@ -29,7 +29,7 @@ object HtmlSanitizer {
         .addEnforcedAttribute("a", "rel", "noopener noreferrer")
 
     private const val BASE_CSS =
-        "body{margin:0;padding:12px;overflow-wrap:anywhere;word-wrap:break-word;color:#202124;background:#fff}" +
+        "body{margin:0;padding:12px 12px 96px;overflow-wrap:anywhere;word-wrap:break-word;color:#202124;background:#fff}" +
             "img{max-width:100% !important;height:auto}table{max-width:100%}"
 
     private val IMPORT = Regex("@import[^;]*;?", RegexOption.IGNORE_CASE)

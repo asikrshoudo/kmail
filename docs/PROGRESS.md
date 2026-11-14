@@ -89,6 +89,7 @@ Known issues (compose):
 Fix: attaching a file in the composer crashed the app (nested vertical scroll). Removed the extra scroll container.
 
 Step 4.1 (archive, delete, mark read or unread, star; multi-select in the list; action bar in the reader): added, verify in CI and on a device.
+Reader surface and screen transitions reworked (rounded email page, horizontal slide with predictive back). Visual check on a device not done yet.
 
 Known issues (actions):
 - Delete moves to the Trash folder. Messages in Trash are not permanently deleted yet.

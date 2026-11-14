@@ -1,6 +1,12 @@
 package com.kmail.thekami.ui.nav
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +51,10 @@ fun KmailNavHost(
     NavHost(
         navController = navController,
         startDestination = startRoute,
+        enterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(300)) },
+        exitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeOut(tween(200)) },
+        popEnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeIn(tween(300)) },
+        popExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200)) },
     ) {
         composable(Routes.WELCOME) {
             WelcomeScreen(onGetStarted = { navController.navigate(Routes.CREDENTIALS) })

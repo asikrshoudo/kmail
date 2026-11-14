@@ -24,21 +24,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Star
-import com.kmail.thekami.ui.home.actionNoticeText
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -71,6 +71,7 @@ import com.kmail.thekami.mail.ParsedAttachment
 import com.kmail.thekami.mail.ParsedMessage
 import com.kmail.thekami.ui.components.ErrorState
 import com.kmail.thekami.ui.components.LoadingState
+import com.kmail.thekami.ui.home.actionNoticeText
 import com.kmail.thekami.ui.setup.messageRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -88,10 +89,12 @@ fun ReaderScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var pendingLink by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+
     LaunchedEffect(state.finished) { if (state.finished) onBack() }
 
     Scaffold(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surface,
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             if (state.message != null) {
@@ -214,7 +217,6 @@ private fun ReaderContent(
     onLink: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    LaunchedEffect(state.finished) { if (state.finished) onBack() }
     val scope = rememberCoroutineScope()
     var pending by remember { mutableStateOf<ParsedAttachment?>(null) }
     val saveLauncher = rememberLauncherForActivityResult(
@@ -242,7 +244,12 @@ private fun ReaderContent(
     Column(Modifier.fillMaxSize()) {
         if (notice != null) {
             Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
-                Text(notice, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(16.dp, 8.dp))
+                Text(
+                    notice,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             }
         }
         ReaderHeader(
@@ -254,8 +261,15 @@ private fun ReaderContent(
                 saveLauncher.launch(it.fileName)
             },
         )
-        HorizontalDivider()
-        EmailWebView(html = html, allowRemote = allowRemote, onLink = onLink, modifier = Modifier.weight(1f).fillMaxWidth())
+        // The email itself is a white page with rounded top corners. It reaches the bottom so the
+        // floating action bar sits on it; the page has bottom padding so no text is hidden.
+        Surface(
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = Color.White,
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
+        ) {
+            EmailWebView(html = html, allowRemote = allowRemote, onLink = onLink, modifier = Modifier.fillMaxSize())
+        }
     }
 }
 
@@ -267,7 +281,6 @@ private fun ReaderHeader(
     onSave: (ParsedAttachment) -> Unit,
 ) {
     val context = LocalContext.current
-    LaunchedEffect(state.finished) { if (state.finished) onBack() }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val from = message.from
     val senderName = from?.name ?: from?.address ?: stringResource(R.string.home_unknown_sender)
@@ -283,26 +296,29 @@ private fun ReaderHeader(
         Modifier
             .heightIn(max = 320.dp)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = message.subject.ifBlank { stringResource(R.string.home_no_subject) },
             style = MaterialTheme.typography.headlineSmall,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(44.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(initial, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(initial, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text(senderName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(senderName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 if (from != null) {
                     Text(from.address, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                 }
-                Text(recipientSummary(message.to), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    recipientSummary(message.to),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             TextButton(onClick = { expanded = !expanded }) {
                 Text(stringResource(if (expanded) R.string.reader_details_hide else R.string.reader_details_show))
@@ -315,7 +331,7 @@ private fun ReaderHeader(
             DetailLine(stringResource(R.string.reader_label_date), date)
             DetailLine(stringResource(R.string.reader_label_id), message.messageId)
         } else if (date != null) {
-            Text(date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(date, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (showImagesBanner) {
             Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
@@ -343,6 +359,7 @@ private fun ReaderHeader(
         }
     }
 }
+
 @Composable
 private fun recipientSummary(to: List<Mailbox>): String = when {
     to.isEmpty() -> stringResource(R.string.reader_no_recipients)
@@ -354,9 +371,47 @@ private fun recipientSummary(to: List<Mailbox>): String = when {
 private fun DetailLine(label: String, value: String?) {
     if (value.isNullOrBlank()) return
     Row {
-        Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(72.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(72.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+    }
+}
+
+@Composable
+private fun ReaderActionBar(
+    starred: Boolean,
+    onReply: () -> Unit,
+    onForward: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    onStar: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+    ) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onReply) { Text(stringResource(R.string.compose_reply)) }
+            TextButton(onClick = onForward) { Text(stringResource(R.string.compose_forward)) }
+            TextButton(onClick = onArchive) { Text(stringResource(R.string.home_archive)) }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.home_delete))
+            }
+            IconButton(onClick = onStar) {
+                Icon(
+                    Icons.Filled.Star,
+                    contentDescription = stringResource(if (starred) R.string.home_unstar else R.string.home_star),
+                    tint = if (starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
@@ -404,39 +459,4 @@ private fun EmailWebView(
         },
         onRelease = { it.destroy() },
     )
-}
-
-@Composable
-private fun ReaderActionBar(
-    starred: Boolean,
-    onReply: () -> Unit,
-    onForward: () -> Unit,
-    onArchive: () -> Unit,
-    onDelete: () -> Unit,
-    onStar: () -> Unit,
-) {
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 6.dp,
-        shadowElevation = 6.dp,
-    ) {
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onReply) { Text(stringResource(R.string.compose_reply)) }
-            TextButton(onClick = onForward) { Text(stringResource(R.string.compose_forward)) }
-            TextButton(onClick = onArchive) { Text(stringResource(R.string.home_archive)) }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.home_delete))
-            }
-            IconButton(onClick = onStar) {
-                Icon(
-                    Icons.Filled.Star,
-                    contentDescription = stringResource(if (starred) R.string.home_unstar else R.string.home_star),
-                    tint = if (starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
 }
