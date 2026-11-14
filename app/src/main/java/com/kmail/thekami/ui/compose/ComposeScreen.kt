@@ -174,9 +174,6 @@ fun ComposeScreen(
             )
 
             if (state.attachments.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    // Wrapped in a column scroll above; chips stay on one row and scroll with the page.
-                }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     state.attachments.forEach { attachment ->
                         AssistChip(

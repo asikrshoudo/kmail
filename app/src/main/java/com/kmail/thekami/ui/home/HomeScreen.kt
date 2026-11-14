@@ -2,7 +2,10 @@ package com.kmail.thekami.ui.home
 
 import android.text.format.DateFormat
 import android.text.format.DateUtils
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +20,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -39,6 +44,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -77,10 +84,13 @@ fun HomeScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var menuOpen by remember { mutableStateOf(false) }
+    val selecting = state.selectedIds.isNotEmpty()
+    BackHandler(enabled = selecting) { vm.clearSelection() }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         modifier = modifier,
+        gesturesEnabled = !selecting,
         drawerContent = {
             Sidebar(
                 state = state,
@@ -97,45 +107,54 @@ fun HomeScreen(
     ) {
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(onClick = onCompose) {
-                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.home_compose))
+                if (!selecting) {
+                    FloatingActionButton(onClick = onCompose) {
+                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.home_compose))
+                    }
                 }
             },
             topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text(greeting()) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.home_open_menu))
-                        }
-                    },
-                    actions = {
-                        Box {
-                            IconButton(onClick = { menuOpen = true }) {
-                                Icon(
-                                    Icons.Filled.MoreVert,
-                                    contentDescription = stringResource(R.string.home_more_options),
-                                )
+                if (selecting) {
+                    SelectionBar(
+                        count = state.selectedIds.size,
+                        onCancel = vm::clearSelection,
+                        onArchive = vm::archive,
+                        onDelete = vm::delete,
+                        onMarkRead = vm::markRead,
+                        onStar = vm::setStarred,
+                        onSelectAll = vm::selectAll,
+                    )
+                } else {
+                    CenterAlignedTopAppBar(
+                        title = { Text(greeting()) },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.home_open_menu))
                             }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.home_refresh)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        vm.refresh()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.home_add_account)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onAddAccount()
-                                    },
-                                )
+                        },
+                        actions = {
+                            Box {
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                                }
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.home_refresh)) },
+                                        onClick = { menuOpen = false; vm.refresh() },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.home_select_all)) },
+                                        onClick = { menuOpen = false; vm.selectAll() },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.home_add_account)) },
+                                        onClick = { menuOpen = false; onAddAccount() },
+                                    )
+                                }
                             }
-                        }
-                    },
-                )
+                        },
+                    )
+                }
             },
         ) { padding ->
             Column(Modifier.padding(padding).fillMaxSize()) {
@@ -149,14 +168,13 @@ fun HomeScreen(
                     shape = MaterialTheme.shapes.extraLarge,
                 )
                 state.error?.let { error ->
-                    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.home_sync_error, stringResource(error.messageRes())),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
+                    Banner(
+                        text = stringResource(R.string.home_sync_error, stringResource(error.messageRes())),
+                        onDismiss = null,
+                    )
+                }
+                state.notice?.let { notice ->
+                    actionNoticeText(notice)?.let { Banner(text = it, onDismiss = vm::dismissNotice) }
                 }
                 PullToRefreshBox(
                     isRefreshing = state.refreshing,
@@ -171,10 +189,7 @@ fun HomeScreen(
                                     verticalArrangement = Arrangement.Center,
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
-                                    Text(
-                                        stringResource(R.string.home_empty_title),
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
+                                    Text(stringResource(R.string.home_empty_title), style = MaterialTheme.typography.titleMedium)
                                     Text(
                                         stringResource(R.string.home_empty_message),
                                         style = MaterialTheme.typography.bodyMedium,
@@ -183,9 +198,75 @@ fun HomeScreen(
                                 }
                             }
                         } else {
-                            items(state.messages, key = { it.id }) { MessageRow(it, onClick = { onOpenMessage(it.id) }) }
+                            items(state.messages, key = { it.id }) { item ->
+                                MessageRow(
+                                    item = item,
+                                    selected = item.id in state.selectedIds,
+                                    onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
+                                    onLongClick = { vm.toggleSelect(item.id) },
+                                )
+                            }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionBar(
+    count: Int,
+    onCancel: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    onMarkRead: (Boolean) -> Unit,
+    onStar: (Boolean) -> Unit,
+    onSelectAll: () -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    TopAppBar(
+        title = { Text(stringResource(R.string.home_selected, count)) },
+        navigationIcon = {
+            IconButton(onClick = onCancel) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_cancel_selection))
+            }
+        },
+        actions = {
+            TextButton(onClick = onArchive) { Text(stringResource(R.string.home_archive)) }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.home_delete))
+            }
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.home_mark_read)) }, onClick = { menu = false; onMarkRead(true) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.home_mark_unread)) }, onClick = { menu = false; onMarkRead(false) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.home_star)) }, onClick = { menu = false; onStar(true) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.home_unstar)) }, onClick = { menu = false; onStar(false) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.home_select_all)) }, onClick = { menu = false; onSelectAll() })
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun Banner(text: String, onDismiss: (() -> Unit)?) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+            )
+            if (onDismiss != null) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.compose_discard_keep))
                 }
             }
         }
@@ -275,12 +356,24 @@ private fun formatTime(millis: Long): String {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageRow(item: MessageItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun MessageRow(
+    item: MessageItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val weight = if (item.isRead) FontWeight.Normal else FontWeight.Bold
     val initial = item.sender.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
+    val background = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     Row(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .background(background)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Surface(
@@ -289,7 +382,7 @@ private fun MessageRow(item: MessageItem, onClick: () -> Unit, modifier: Modifie
             modifier = Modifier.size(44.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(initial, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(if (selected) "\u2713" else initial, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
         Column(Modifier.weight(1f)) {
@@ -317,15 +410,9 @@ private fun MessageRow(item: MessageItem, onClick: () -> Unit, modifier: Modifie
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (item.hasAttachments) {
-                    Text("\uD83D\uDCCE", modifier = Modifier.padding(start = 6.dp))
-                }
+                if (item.hasAttachments) Text("\uD83D\uDCCE", modifier = Modifier.padding(start = 6.dp))
                 if (item.isStarred) {
-                    Text(
-                        "\u2605",
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
+                    Text("\u2605", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 6.dp))
                 }
             }
             if (item.snippet.isNotBlank()) {

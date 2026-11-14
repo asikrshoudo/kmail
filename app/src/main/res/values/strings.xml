@@ -147,4 +147,16 @@
     <string name="compose_forward_date">Date: %1$s</string>
     <string name="compose_forward_subject">Subject: %1$s</string>
     <string name="compose_forward_to">To: %1$s</string>
+
+    <string name="home_selected">%1$d selected</string>
+    <string name="home_archive">Archive</string>
+    <string name="home_delete">Delete</string>
+    <string name="home_mark_read">Mark as read</string>
+    <string name="home_mark_unread">Mark as unread</string>
+    <string name="home_star">Star</string>
+    <string name="home_unstar">Remove star</string>
+    <string name="home_select_all">Select all</string>
+    <string name="home_cancel_selection">Cancel selection</string>
+    <string name="home_notice_no_folder">This account has no %1$s folder.</string>
+    <string name="home_action_error">Couldn’t complete the action: %1$s</string>
 </resources>

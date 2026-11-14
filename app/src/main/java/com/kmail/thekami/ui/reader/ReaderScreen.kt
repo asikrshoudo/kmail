@@ -33,6 +33,11 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Star
+import com.kmail.thekami.ui.home.actionNoticeText
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -83,9 +88,23 @@ fun ReaderScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var pendingLink by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    LaunchedEffect(state.finished) { if (state.finished) onBack() }
 
     Scaffold(
         modifier = modifier,
+        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButton = {
+            if (state.message != null) {
+                ReaderActionBar(
+                    starred = state.starred,
+                    onReply = { onCompose("reply", vm.messageId) },
+                    onForward = { onCompose("forward", vm.messageId) },
+                    onArchive = vm::archive,
+                    onDelete = vm::delete,
+                    onStar = vm::toggleStar,
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {},
@@ -96,8 +115,6 @@ fun ReaderScreen(
                 },
                 actions = {
                     if (state.message != null) {
-                        TextButton(onClick = { onCompose("reply", vm.messageId) }) { Text(stringResource(R.string.compose_reply)) }
-                        TextButton(onClick = { onCompose("forward", vm.messageId) }) { Text(stringResource(R.string.compose_forward)) }
                         Box {
                             IconButton(onClick = { menuOpen = true }) {
                                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reader_more))
@@ -148,6 +165,7 @@ fun ReaderScreen(
                     onRetry = vm::load,
                 )
                 message != null -> ReaderContent(
+                    notice = s.notice?.let { actionNoticeText(it) },
                     message = message,
                     html = s.html,
                     blockedRemote = s.blockedRemote,
@@ -187,6 +205,7 @@ fun ReaderScreen(
 
 @Composable
 private fun ReaderContent(
+    notice: String?,
     message: ParsedMessage,
     html: String,
     blockedRemote: Int,
@@ -195,6 +214,7 @@ private fun ReaderContent(
     onLink: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    LaunchedEffect(state.finished) { if (state.finished) onBack() }
     val scope = rememberCoroutineScope()
     var pending by remember { mutableStateOf<ParsedAttachment?>(null) }
     val saveLauncher = rememberLauncherForActivityResult(
@@ -220,6 +240,11 @@ private fun ReaderContent(
     }
 
     Column(Modifier.fillMaxSize()) {
+        if (notice != null) {
+            Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                Text(notice, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(16.dp, 8.dp))
+            }
+        }
         ReaderHeader(
             message = message,
             showImagesBanner = blockedRemote > 0 && !allowRemote,
@@ -242,6 +267,7 @@ private fun ReaderHeader(
     onSave: (ParsedAttachment) -> Unit,
 ) {
     val context = LocalContext.current
+    LaunchedEffect(state.finished) { if (state.finished) onBack() }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val from = message.from
     val senderName = from?.name ?: from?.address ?: stringResource(R.string.home_unknown_sender)
@@ -378,4 +404,39 @@ private fun EmailWebView(
         },
         onRelease = { it.destroy() },
     )
+}
+
+@Composable
+private fun ReaderActionBar(
+    starred: Boolean,
+    onReply: () -> Unit,
+    onForward: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    onStar: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp,
+    ) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onReply) { Text(stringResource(R.string.compose_reply)) }
+            TextButton(onClick = onForward) { Text(stringResource(R.string.compose_forward)) }
+            TextButton(onClick = onArchive) { Text(stringResource(R.string.home_archive)) }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.home_delete))
+            }
+            IconButton(onClick = onStar) {
+                Icon(
+                    Icons.Filled.Star,
+                    contentDescription = stringResource(if (starred) R.string.home_unstar else R.string.home_star),
+                    tint = if (starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }

@@ -20,7 +20,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-private class FakeFolderDao : FolderDao {
+internal class FakeFolderDao : FolderDao {
     val rows = mutableListOf<FolderEntity>()
     private var nextId = 1L
     override fun observeByAccount(accountId: String) = flowOf(rows.filter { it.accountId == accountId })
@@ -39,7 +39,7 @@ private class FakeFolderDao : FolderDao {
     override suspend fun listByAccount(accountId: String) = rows.filter { it.accountId == accountId }
 }
 
-private class FakeMessageDao : MessageDao {
+internal class FakeMessageDao : MessageDao {
     val rows = mutableListOf<MessageEntity>()
     private var nextId = 1L
     private fun same(a: MessageEntity, b: MessageEntity) =
@@ -61,8 +61,13 @@ private class FakeMessageDao : MessageDao {
                 id
             }
         }
-    override suspend fun updateFlags(id: Long, isRead: Boolean, isStarred: Boolean) {}
-    override suspend fun markRemoved(ids: List<Long>, nowMillis: Long) {}
+    override suspend fun updateFlags(id: Long, isRead: Boolean, isStarred: Boolean) {
+        val i = rows.indexOfFirst { it.id == id }
+        if (i >= 0) rows[i] = rows[i].copy(isRead = isRead, isStarred = isStarred)
+    }
+    override suspend fun markRemoved(ids: List<Long>, nowMillis: Long) {
+        for (i in rows.indices) if (rows[i].id in ids) rows[i] = rows[i].copy(removedAtMillis = nowMillis)
+    }
     override suspend fun deleteStaleValidity(folderId: Long, currentUidValidity: Long) {
         rows.removeAll { it.folderId == folderId && it.uidValidity != currentUidValidity }
     }
@@ -74,10 +79,11 @@ private class FakeMessageDao : MessageDao {
     override fun observeInFolder(folderId: Long, limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeUnifiedInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
+    override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
     override suspend fun updateSnippet(id: Long, snippet: String) {}
 }
 
-private class FakeProvider : MailProvider {
+internal class FakeProvider : MailProvider {
     override val capabilities = ProviderCapabilities(supportsPush = false, supportsCategories = false)
     var folders: MailResult<List<RemoteFolder>> = MailResult.Success(emptyList())
     val fetchCalls = mutableListOf<Long?>()

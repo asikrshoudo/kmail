@@ -86,6 +86,17 @@ Known issues (compose):
 - Recipients are plain text fields, not chips.
 - Reply and forward need the original message from the server or from the in-memory cache.
 
+Fix: attaching a file in the composer crashed the app (nested vertical scroll). Removed the extra scroll container.
+
+Step 4.1 (archive, delete, mark read or unread, star; multi-select in the list; action bar in the reader): added, verify in CI and on a device.
+
+Known issues (actions):
+- Delete moves to the Trash folder. Messages in Trash are not permanently deleted yet.
+- Moved messages appear in the target folder after its next sync.
+- No undo.
+- Swipe actions, move to a chosen folder and reading-bar customization are not built yet.
+- Flag changes made on other devices are not picked up by sync yet.
+
 ## Next
 
-Phase 4: swipe actions, multi-select, archive/delete/move, search, signatures, App Lock. Then release preparation for internal testing.
+Settings (accounts, remove account), App Lock, then release preparation for internal testing.

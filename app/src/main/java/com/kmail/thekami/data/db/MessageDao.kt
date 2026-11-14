@@ -66,4 +66,7 @@ interface MessageDao {
 
     @Query("UPDATE messages SET snippet = :snippet WHERE id = :id")
     suspend fun updateSnippet(id: Long, snippet: String)
+
+    @Query("SELECT * FROM messages WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<Long>): List<MessageEntity>
 }
