@@ -17,4 +17,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindProviderSource(impl: MailProviderFactory): ProviderSource
+
+    @Binds
+    abstract fun bindLockConfig(impl: com.kmail.thekami.data.security.AppLockStore): com.kmail.thekami.data.security.LockConfig
 }

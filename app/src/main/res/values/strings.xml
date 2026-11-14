@@ -159,4 +159,46 @@
     <string name="home_cancel_selection">Cancel selection</string>
     <string name="home_notice_no_folder">This account has no %1$s folder.</string>
     <string name="home_action_error">Couldn’t complete the action: %1$s</string>
+
+    <string name="home_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_accounts">Accounts</string>
+    <string name="settings_remove_account">Remove</string>
+    <string name="settings_remove_title">Remove %1$s?</string>
+    <string name="settings_remove_message">This deletes the account, its saved password and the mail cached on this device. Your mailbox on the server is not changed.</string>
+    <string name="settings_remove_confirm">Remove</string>
+    <string name="settings_privacy">Privacy &amp; Security</string>
+    <string name="settings_app_lock">App Lock</string>
+    <string name="settings_app_lock_desc">Ask for a PIN when Kmail opens.</string>
+    <string name="settings_lock_note">If you forget the PIN, clear the app data or reinstall Kmail. Your mailbox on the server is not affected.</string>
+    <string name="settings_biometric">Unlock with fingerprint or face</string>
+    <string name="settings_auto_lock">Lock after leaving the app</string>
+    <string name="settings_auto_lock_immediate">Immediately</string>
+    <string name="settings_auto_lock_minutes">%1$d min</string>
+    <string name="settings_pin_set_title">Set a PIN</string>
+    <string name="settings_pin_hint">4 to 8 digits. Avoid easy PINs like 1234.</string>
+    <string name="settings_pin_new">New PIN</string>
+    <string name="settings_pin_confirm">Confirm PIN</string>
+    <string name="settings_pin_enter">PIN</string>
+    <string name="settings_pin_enter_to_continue">Enter your PIN to continue.</string>
+    <string name="settings_pin_error_format">Use 4 to 8 digits.</string>
+    <string name="settings_pin_error_weak">That PIN is too easy to guess.</string>
+    <string name="settings_pin_error_mismatch">The PINs don’t match.</string>
+    <string name="settings_pin_save">Save</string>
+    <string name="settings_disable_lock_title">Turn off App Lock?</string>
+    <string name="settings_turn_off">Turn off</string>
+    <string name="settings_about">About &amp; Support</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
+    <string name="settings_privacy_url" translatable="false">https://thekami.tech/kmail/privacy</string>
+    <string name="settings_brand" translatable="false">TheKami</string>
+
+    <string name="lock_title">Kmail is locked</string>
+    <string name="lock_pin_label">PIN</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="lock_wrong">Wrong PIN.</string>
+    <string name="lock_wait">Too many attempts. Try again in %1$d s.</string>
+    <string name="lock_biometric">Use biometrics</string>
+    <string name="lock_biometric_title">Unlock Kmail</string>
+    <string name="lock_biometric_cancel">Use PIN</string>
 </resources>

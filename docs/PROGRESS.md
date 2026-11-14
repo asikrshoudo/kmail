@@ -98,6 +98,17 @@ Known issues (actions):
 - Swipe actions, move to a chosen folder and reading-bar customization are not built yet.
 - Flag changes made on other devices are not picked up by sync yet.
 
+Step 5.1 (Settings: accounts, remove account, App Lock with PIN, biometrics and auto-lock, About; privacy policy text): added, verify in CI and on a device.
+
+Known issues (settings and lock):
+- App Lock has no security-question recovery yet. A forgotten PIN means clearing app data.
+- The PIN hash is not bound to the Android Keystore yet.
+- The lock screen is a cover inside the app. Android's recent-apps preview is not hidden and screenshots are not blocked.
+- Lockout timing uses the device clock.
+- Settings has no search field and only three sections. Appearance, Sync, Notifications and other categories are not built.
+- The privacy policy URL in strings.xml (settings_privacy_url) must point to a real page. `docs/PRIVACY_POLICY.md` is the text; CONTACT_EMAIL must be replaced.
+- The TheKami logo asset has not been supplied. Settings shows the text "TheKami" and the version.
+
 ## Next
 
-Settings (accounts, remove account), App Lock, then release preparation for internal testing.
+Release preparation: app icon, Play Store listing, data safety answers, internal testing track.

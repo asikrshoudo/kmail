@@ -10,6 +10,12 @@ class MessageBodyCache @Inject constructor() {
     private var total = 0L
 
     @Synchronized
+    fun clear() {
+        map.clear()
+        total = 0L
+    }
+
+    @Synchronized
     fun get(id: Long): ByteArray? = map[id]
 
     @Synchronized

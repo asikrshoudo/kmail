@@ -8,6 +8,7 @@ object Routes {
     const val OUTGOING = "outgoing"
     const val CONNECTING = "connecting"
     const val CONNECTED = "connected"
+    const val SETTINGS = "settings"
     const val READER = "reader/{messageId}"
     const val COMPOSE = "compose/{mode}/{messageId}"
 
