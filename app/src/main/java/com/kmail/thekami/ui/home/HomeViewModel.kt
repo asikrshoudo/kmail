@@ -175,6 +175,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private val exhausted = mutableSetOf<Long>()
+
+    /** Loads the next older page of the shown folder, or of every inbox in the unified view. */
+    fun loadMore() {
+        if (refreshing.value) return
+        val ids = when (val sel = selection.value) {
+            MailboxSelection.Unified -> uiState.value.sidebar.flatMap { it.folders }
+                .filter { it.role == FolderRole.INBOX }.map { it.id }
+            is MailboxSelection.Folder -> listOf(sel.id)
+        }.filter { it !in exhausted }
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            refreshing.value = true
+            val results = ids.map { it to sync.loadOlder(it) }
+            results.filter { it.second.noMore }.forEach { exhausted += it.first }
+            error.value = results.firstNotNullOfOrNull { it.second.error }
+            refreshing.value = false
+        }
+    }
+
     // ---- selection mode ----
 
     fun toggleSelect(id: Long) = extras.update {

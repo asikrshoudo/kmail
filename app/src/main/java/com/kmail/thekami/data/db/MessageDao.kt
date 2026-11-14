@@ -79,4 +79,10 @@ interface MessageDao {
             "AND m.uidValidity = f.uidValidity ORDER BY m.receivedAtMillis DESC",
     )
     suspend fun newUnreadInbox(afterId: Long): List<MessageEntity>
+
+    @Query("SELECT MIN(uid) FROM messages WHERE folderId = :folderId AND uidValidity = :uidValidity")
+    suspend fun minUid(folderId: Long, uidValidity: Long): Long?
+
+    @Query("SELECT * FROM messages WHERE folderId = :folderId AND uidValidity = :uidValidity AND removedAtMillis IS NULL")
+    suspend fun listLive(folderId: Long, uidValidity: Long): List<MessageEntity>
 }

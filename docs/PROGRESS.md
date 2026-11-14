@@ -119,6 +119,16 @@ Known issues (sync and notifications):
 - Notifications use one channel; no per-account settings, sound or quiet hours yet.
 - A new-mail notification is skipped for an inbox that was never synced before.
 
+Steps 6.1 and 6.2 on a device: build installed and ran. Appearance and background sync were not checked in detail.
+
+Step 7.1 (sync reconcile: server-side deletions and flag changes; load older messages): added, verify in CI and on a device.
+
+Known issues (sync):
+- Reconcile runs on foreground refresh only, not in background sync, to save battery and connections.
+- Reconcile compares only messages that are cached. Older messages are checked when they are loaded.
+- Folders other than the inbox are synced only when opened.
+- Server-side deletions hide the cached row. Hidden rows are never purged yet.
+
 ## Next
 
-Swipe actions, load more, server-side deletions and flag sync, drafts autosave, app icon, translations.
+Swipe actions and sort/filter, drafts autosave, signatures, contact suggestions, security-question recovery, translations.

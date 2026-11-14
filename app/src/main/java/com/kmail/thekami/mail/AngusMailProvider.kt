@@ -13,7 +13,9 @@ import com.kmail.thekami.domain.model.CredentialPurpose
 import com.kmail.thekami.domain.model.FolderRole
 import com.kmail.thekami.domain.model.FolderSnapshot
 import com.kmail.thekami.domain.model.MAX_IMAP_UINT32
+import com.kmail.thekami.domain.model.RemoteFlags
 import com.kmail.thekami.domain.model.RemoteFolder
+import com.kmail.thekami.domain.model.RemoteMessageHeader
 import jakarta.mail.Address
 import jakarta.mail.FetchProfile
 import jakarta.mail.Flags
@@ -304,6 +306,66 @@ class AngusMailProvider(
         val message = MimeMessage(Session.getInstance(java.util.Properties()), ByteArrayInputStream(rawMime))
         if (isRead) message.setFlag(Flags.Flag.SEEN, true)
         target.appendMessages(arrayOf<Message>(message))
+    }
+
+    override suspend fun fetchOlder(
+        folder: RemoteFolder,
+        uidValidity: Long,
+        beforeUid: Long,
+        limit: Int,
+    ): MailResult<List<RemoteMessageHeader>> {
+        require(limit > 0) { "limit must be positive" }
+        return withStore { store ->
+            store.withFolder(folder.remoteName, Folder.READ_ONLY) { f, uf ->
+                checkValidity(uf, uidValidity)
+                val anchor = uf.getMessageByUID(beforeUid)
+                val messages: Array<Message> = if (anchor != null) {
+                    val seq = anchor.messageNumber
+                    if (seq <= 1) emptyArray() else f.getMessages(maxOf(1, seq - limit), seq - 1)
+                } else if (beforeUid <= 1) {
+                    emptyArray()
+                } else {
+                    // The anchor was deleted on the server: fall back to a UID range.
+                    uf.getMessagesByUID(1, beforeUid - 1).takeLast(limit).toTypedArray()
+                }
+                val profile = FetchProfile().apply {
+                    add(FetchProfile.Item.ENVELOPE)
+                    add(FetchProfile.Item.FLAGS)
+                    add(FetchProfile.Item.CONTENT_INFO)
+                    add(UIDFolder.FetchProfileItem.UID)
+                }
+                f.fetch(messages, profile)
+                messages.mapNotNull { m ->
+                    val uid = uf.getUID(m)
+                    if (uid !in 1 until beforeUid) null else (m as? MimeMessage)?.let { MessageMapper.toHeader(uid, it) }
+                }.sortedBy { it.uid }
+            }
+        }
+    }
+
+    override suspend fun fetchFlags(
+        folder: RemoteFolder,
+        uidValidity: Long,
+        fromUid: Long,
+    ): MailResult<List<RemoteFlags>> = withStore { store ->
+        store.withFolder(folder.remoteName, Folder.READ_ONLY) { f, uf ->
+            checkValidity(uf, uidValidity)
+            if (f.messageCount == 0) {
+                emptyList<RemoteFlags>()
+            } else {
+                val messages = uf.getMessagesByUID(fromUid, UIDFolder.LASTUID)
+                val profile = FetchProfile().apply {
+                    add(FetchProfile.Item.FLAGS)
+                    add(UIDFolder.FetchProfileItem.UID)
+                }
+                f.fetch(messages, profile)
+                // "N:*" always includes the last message, even if its UID is below N.
+                messages.mapNotNull { m ->
+                    val uid = uf.getUID(m)
+                    if (uid < fromUid) null else RemoteFlags(uid, m.isSet(Flags.Flag.SEEN), m.isSet(Flags.Flag.FLAGGED))
+                }
+            }
+        }
     }
 
     private companion object {

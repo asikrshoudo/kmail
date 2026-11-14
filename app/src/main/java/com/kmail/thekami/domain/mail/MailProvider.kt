@@ -55,4 +55,19 @@ interface MailProvider {
 
     /** Stores a copy of a message in [folder], for example a sent message in the Sent folder. */
     suspend fun appendMessage(folder: RemoteFolder, rawMime: ByteArray, isRead: Boolean): MailResult<Unit>
+
+    /** Up to [limit] headers of messages older than [beforeUid]. */
+    suspend fun fetchOlder(
+        folder: RemoteFolder,
+        uidValidity: Long,
+        beforeUid: Long,
+        limit: Int,
+    ): MailResult<List<com.kmail.thekami.domain.model.RemoteMessageHeader>>
+
+    /** Flags of every message with a UID of [fromUid] or higher. Missing UIDs were deleted or moved on the server. */
+    suspend fun fetchFlags(
+        folder: RemoteFolder,
+        uidValidity: Long,
+        fromUid: Long,
+    ): MailResult<List<com.kmail.thekami.domain.model.RemoteFlags>>
 }

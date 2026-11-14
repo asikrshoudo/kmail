@@ -9,7 +9,9 @@ import com.kmail.thekami.domain.mail.ProviderCapabilities
 import com.kmail.thekami.domain.mail.ProviderSource
 import com.kmail.thekami.domain.model.FolderRole
 import com.kmail.thekami.domain.model.FolderSnapshot
+import com.kmail.thekami.domain.model.RemoteFlags
 import com.kmail.thekami.domain.model.RemoteFolder
+import com.kmail.thekami.domain.model.RemoteMessageHeader
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -24,6 +26,10 @@ private class RecordingProvider : MailProvider {
     val flagCalls = mutableListOf<List<Long>>()
     val moveCalls = mutableListOf<Pair<List<Long>, String>>()
 
+    override suspend fun fetchOlder(folder: RemoteFolder, uidValidity: Long, beforeUid: Long, limit: Int): MailResult<List<RemoteMessageHeader>> =
+        MailResult.Success(emptyList())
+    override suspend fun fetchFlags(folder: RemoteFolder, uidValidity: Long, fromUid: Long): MailResult<List<RemoteFlags>> =
+        MailResult.Success(emptyList())
     override suspend fun testConnection(): MailResult<Unit> = MailResult.Success(Unit)
     override suspend fun listFolders(): MailResult<List<RemoteFolder>> = MailResult.Success(emptyList())
     override suspend fun fetchHeaders(folder: RemoteFolder, afterUid: Long?, limit: Int): MailResult<FolderSnapshot> =

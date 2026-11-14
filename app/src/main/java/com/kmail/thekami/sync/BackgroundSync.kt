@@ -29,7 +29,7 @@ class BackgroundSync @Inject constructor(
             folderDao.listByAccount(account.id).any { it.role == FolderRole.INBOX && it.lastSyncedAtMillis != null }
         }.map { it.id }.toSet()
 
-        val errors = coroutineScope { accounts.map { async { sync.syncAccount(it.id) } }.awaitAll() }
+        val errors = coroutineScope { accounts.map { async { sync.syncAccount(it.id, reconcile = false) } }.awaitAll() }
 
         if (notificationsEnabled) {
             val fresh = messageDao.newUnreadInbox(baseline).filter { it.accountId in warm }

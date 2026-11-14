@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -86,6 +89,16 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     var menuOpen by remember { mutableStateOf(false) }
     val selecting = state.selectedIds.isNotEmpty()
+    val listState = rememberLazyListState()
+    val nearEnd by remember {
+        derivedStateOf {
+            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            last >= listState.layoutInfo.totalItemsCount - 3
+        }
+    }
+    LaunchedEffect(nearEnd, state.messages.size) {
+        if (nearEnd && state.messages.isNotEmpty()) vm.loadMore()
+    }
     BackHandler(enabled = selecting) { vm.clearSelection() }
 
     ModalNavigationDrawer(
@@ -183,7 +196,7 @@ fun HomeScreen(
                     onRefresh = vm::refresh,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
-                    LazyColumn(Modifier.fillMaxSize()) {
+                    LazyColumn(Modifier.fillMaxSize(), state = listState) {
                         if (state.messages.isEmpty()) {
                             item {
                                 Column(

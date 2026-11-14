@@ -11,6 +11,7 @@ import com.kmail.thekami.domain.mail.ProviderCapabilities
 import com.kmail.thekami.domain.mail.ProviderSource
 import com.kmail.thekami.domain.model.FolderRole
 import com.kmail.thekami.domain.model.FolderSnapshot
+import com.kmail.thekami.domain.model.RemoteFlags
 import com.kmail.thekami.domain.model.RemoteFolder
 import com.kmail.thekami.domain.model.RemoteMessageHeader
 import kotlinx.coroutines.flow.flowOf
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 internal class FakeFolderDao : FolderDao {
@@ -81,6 +83,10 @@ internal class FakeMessageDao : MessageDao {
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
     override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
     override suspend fun maxId(): Long = rows.maxOfOrNull { it.id } ?: 0L
+    override suspend fun minUid(folderId: Long, uidValidity: Long): Long? =
+        rows.filter { it.folderId == folderId && it.uidValidity == uidValidity }.minOfOrNull { it.uid }
+    override suspend fun listLive(folderId: Long, uidValidity: Long): List<MessageEntity> =
+        rows.filter { it.folderId == folderId && it.uidValidity == uidValidity && it.removedAtMillis == null }
     override suspend fun newUnreadInbox(afterId: Long): List<MessageEntity> =
         rows.filter { it.id > afterId && !it.isRead && it.removedAtMillis == null }
     override suspend fun updateSnippet(id: Long, snippet: String) {}
@@ -93,6 +99,11 @@ internal class FakeProvider : MailProvider {
     var onFetch: (Long?) -> MailResult<FolderSnapshot> = { MailResult.Success(FolderSnapshot(1, 1, emptyList())) }
 
     override suspend fun appendMessage(folder: RemoteFolder, rawMime: ByteArray, isRead: Boolean) = MailResult.Success(Unit)
+    var flags: MailResult<List<RemoteFlags>> = MailResult.Failure(MailError.Unsupported())
+    var older: MailResult<List<RemoteMessageHeader>> = MailResult.Success(emptyList())
+    override suspend fun fetchFlags(folder: RemoteFolder, uidValidity: Long, fromUid: Long) = flags
+    override suspend fun fetchOlder(folder: RemoteFolder, uidValidity: Long, beforeUid: Long, limit: Int) = older
+
     override suspend fun testConnection() = MailResult.Success(Unit)
     override suspend fun listFolders() = folders
     override suspend fun fetchHeaders(folder: RemoteFolder, afterUid: Long?, limit: Int): MailResult<FolderSnapshot> {
@@ -208,5 +219,48 @@ class SyncRepositoryTest {
         assertEquals(2, folders.rows.size)
         assertEquals(1, messages.rows.size)
         assertEquals(listOf<Long?>(null, 1L), provider.fetchCalls)
+    }
+
+    @Test
+    fun reconcileHidesServerDeletedMessagesAndCopiesFlags() = runTest {
+        val id = addInbox()
+        provider.onFetch = { MailResult.Success(FolderSnapshot(5, 5, listOf(h(1), h(2), h(3)))) }
+        provider.flags = MailResult.Success(listOf(RemoteFlags(2, true, false), RemoteFlags(3, false, true)))
+        assertNull(repo.syncFolder(id))
+        assertNotNull(messages.rows.first { it.uid == 1L }.removedAtMillis)
+        assertNull(messages.rows.first { it.uid == 2L }.removedAtMillis)
+        assertTrue(messages.rows.first { it.uid == 2L }.isRead)
+        assertTrue(messages.rows.first { it.uid == 3L }.isStarred)
+    }
+
+    @Test
+    fun reconcileFailureOrSkippingKeepsEverything() = runTest {
+        val id = addInbox()
+        provider.onFetch = { MailResult.Success(FolderSnapshot(5, 4, listOf(h(1), h(2)))) }
+        assertNull(repo.syncFolder(id))
+        provider.flags = MailResult.Success(emptyList())
+        assertNull(repo.syncFolder(id, reconcile = false))
+        assertTrue(messages.rows.all { it.removedAtMillis == null })
+    }
+
+    @Test
+    fun loadOlderAddsEarlierMessagesAndReportsTheEnd() = runTest {
+        val id = addInbox()
+        provider.onFetch = { MailResult.Success(FolderSnapshot(5, 12, listOf(h(10), h(11)))) }
+        repo.syncFolder(id)
+        provider.older = MailResult.Success(listOf(h(8), h(9)))
+        val result = repo.loadOlder(id)
+        assertNull(result.error)
+        assertTrue(result.noMore)
+        assertEquals(listOf(8L, 9L, 10L, 11L), messages.rows.map { it.uid }.sorted())
+    }
+
+    @Test
+    fun loadOlderReportsFailure() = runTest {
+        val id = addInbox()
+        provider.onFetch = { MailResult.Success(FolderSnapshot(5, 12, listOf(h(10)))) }
+        repo.syncFolder(id)
+        provider.older = MailResult.Failure(MailError.Network("x"))
+        assertEquals(MailError.Network("x"), repo.loadOlder(id).error)
     }
 }
