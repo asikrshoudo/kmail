@@ -55,6 +55,15 @@ Release APK signature checked in CI: v2 scheme, CN=Kmail O=TheKami, RSA 4096.
 |------|---------|--------|
 | 3.1 | IMAP and SMTP provider (folders, headers, raw message, flags, move, send) | Added, verify in CI. Never run against a real mailbox |
 
+Steps 2.8 and 3.2 (start destination, sync engine, inbox list, sidebar): added, verify in CI and on a device.
+
+Known issues (Phase 3):
+- Only the newest 50 messages of a folder are loaded. There is no "load more" yet.
+- Messages deleted or changed on the server are not detected yet. Only new messages are added.
+- Message preview is empty until bodies are fetched (step 3.3).
+- Tapping a message does nothing yet. There is no compose button yet.
+- Search filters the loaded list only. It does not search the server.
+
 ## Next
 
-Step 3.2: sync engine with Room cache, then the real inbox list.
+Step 3.3: reading a message (MIME parsing, sanitized HTML), then compose and send.

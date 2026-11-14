@@ -64,3 +64,6 @@
 - Header fetch leaves the snippet empty. It is filled from the body after the message is downloaded.
 - `hasAttachments` is true for `multipart/mixed`. It can be wrong for unusual messages.
 - Sent mail is not copied to the Sent folder yet. Most SMTP servers do not do it for IMAP clients.
+- Start destination is chosen once at launch from the saved accounts (Home or Welcome).
+- Sync runs on Home open and on pull to refresh. Inbox only at first, other folders when opened. Sync is serialized per account and per folder.
+- Unified inbox shows messages of every account's INBOX folder, joined on the folder's current UIDVALIDITY.

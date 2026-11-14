@@ -66,4 +66,29 @@
     <string name="connected_add_another">Add another account</string>
     <string name="connected_view_folders">View folders</string>
     <string name="connected_folders_unavailable">Folders arrive with inbox sync in a later update.</string>
+
+    <string name="loading_generic">Loading…</string>
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_afternoon">Good afternoon</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="greeting_night">Good night</string>
+    <string name="home_search_hint">Search mail</string>
+    <string name="home_all_inboxes">All inboxes</string>
+    <string name="home_add_account">Add account</string>
+    <string name="home_open_menu">Open menu</string>
+    <string name="home_more_options">More options</string>
+    <string name="home_refresh">Refresh</string>
+    <string name="home_empty_title">Nothing here yet</string>
+    <string name="home_empty_message">Messages appear here after the first sync. Pull down to refresh.</string>
+    <string name="home_sync_error">Couldn’t refresh: %1$s</string>
+    <string name="home_no_subject">(No subject)</string>
+    <string name="home_unknown_sender">(Unknown sender)</string>
+    <string name="home_starred">Starred</string>
+    <string name="home_attachment">Has attachment</string>
+    <string name="role_inbox">Inbox</string>
+    <string name="role_sent">Sent</string>
+    <string name="role_drafts">Drafts</string>
+    <string name="role_archive">Archive</string>
+    <string name="role_spam">Spam</string>
+    <string name="role_trash">Trash</string>
 </resources>

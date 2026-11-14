@@ -19,4 +19,13 @@ interface FolderDao {
 
     @Update
     suspend fun update(folder: FolderEntity)
+
+    @Query("SELECT * FROM folders WHERE id = :id")
+    suspend fun getById(id: Long): FolderEntity?
+
+    @Query("SELECT * FROM folders")
+    fun observeAll(): Flow<List<FolderEntity>>
+
+    @Query("SELECT * FROM folders WHERE accountId = :accountId")
+    suspend fun listByAccount(accountId: String): List<FolderEntity>
 }

@@ -43,4 +43,21 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE folderId = :folderId")
     suspend fun deleteByFolder(folderId: Long)
+
+    @Query("SELECT MAX(uid) FROM messages WHERE folderId = :folderId AND uidValidity = :uidValidity")
+    suspend fun maxUid(folderId: Long, uidValidity: Long): Long?
+
+    @Query(
+        "SELECT m.* FROM messages m JOIN folders f ON f.id = m.folderId " +
+            "WHERE m.folderId = :folderId AND m.uidValidity = f.uidValidity AND m.removedAtMillis IS NULL " +
+            "ORDER BY m.receivedAtMillis DESC, m.uid DESC LIMIT :limit",
+    )
+    fun observeInFolder(folderId: Long, limit: Int): Flow<List<MessageEntity>>
+
+    @Query(
+        "SELECT m.* FROM messages m JOIN folders f ON f.id = m.folderId " +
+            "WHERE f.role = 'INBOX' AND m.uidValidity = f.uidValidity AND m.removedAtMillis IS NULL " +
+            "ORDER BY m.receivedAtMillis DESC, m.uid DESC LIMIT :limit",
+    )
+    fun observeUnifiedInbox(limit: Int): Flow<List<MessageEntity>>
 }

@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.kmail.thekami.R
+import com.kmail.thekami.ui.components.LoadingState
 import com.kmail.thekami.ui.home.HomeScreen
 import com.kmail.thekami.ui.setup.ConnectState
 import com.kmail.thekami.ui.setup.ConnectedScreen
@@ -27,12 +28,19 @@ import com.kmail.thekami.ui.setup.hintRes
 fun KmailNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
+    val appStart: AppStartViewModel = hiltViewModel()
     // One ViewModel for the whole setup flow, owned at the NavHost level.
     val vm: SetupViewModel = hiltViewModel()
 
+    val start by appStart.startRoute.collectAsStateWithLifecycle()
+    val startRoute = start ?: run {
+        LoadingState(message = stringResource(R.string.loading_generic))
+        return
+    }
+
     NavHost(
         navController = navController,
-        startDestination = Routes.WELCOME,
+        startDestination = startRoute,
     ) {
         composable(Routes.WELCOME) {
             WelcomeScreen(onGetStarted = { navController.navigate(Routes.CREDENTIALS) })
@@ -94,7 +102,7 @@ fun KmailNavHost(
             LaunchedEffect(state) {
                 if (state is ConnectState.Connected) {
                     navController.navigate(Routes.CONNECTED) {
-                        popUpTo(Routes.WELCOME) { inclusive = true }
+                        popUpTo(Routes.CREDENTIALS) { inclusive = true }
                     }
                 }
             }
@@ -108,13 +116,16 @@ fun KmailNavHost(
         composable(Routes.CONNECTED) {
             val state by vm.connectState.collectAsStateWithLifecycle()
             val email = (state as? ConnectState.Connected)?.emailAddress.orEmpty()
+            val openInbox = {
+                navController.navigate(Routes.HOME) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                }
+                Unit
+            }
+            BackHandler { openInbox() }
             ConnectedScreen(
                 emailAddress = email,
-                onOpenInbox = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.CONNECTED) { inclusive = true }
-                    }
-                },
+                onOpenInbox = { openInbox() },
                 onAddAnother = {
                     vm.startNewAccount()
                     navController.navigate(Routes.CREDENTIALS) {
@@ -124,6 +135,13 @@ fun KmailNavHost(
             )
         }
 
-        composable(Routes.HOME) { HomeScreen() }
+        composable(Routes.HOME) {
+            HomeScreen(
+                onAddAccount = {
+                    vm.startNewAccount()
+                    navController.navigate(Routes.CREDENTIALS)
+                },
+            )
+        }
     }
 }
