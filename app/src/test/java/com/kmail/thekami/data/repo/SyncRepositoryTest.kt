@@ -83,6 +83,7 @@ private class FakeProvider : MailProvider {
     val fetchCalls = mutableListOf<Long?>()
     var onFetch: (Long?) -> MailResult<FolderSnapshot> = { MailResult.Success(FolderSnapshot(1, 1, emptyList())) }
 
+    override suspend fun appendMessage(folder: RemoteFolder, rawMime: ByteArray, isRead: Boolean) = MailResult.Success(Unit)
     override suspend fun testConnection() = MailResult.Success(Unit)
     override suspend fun listFolders() = folders
     override suspend fun fetchHeaders(folder: RemoteFolder, afterUid: Long?, limit: Int): MailResult<FolderSnapshot> {

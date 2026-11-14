@@ -9,6 +9,10 @@ object Routes {
     const val CONNECTING = "connecting"
     const val CONNECTED = "connected"
     const val READER = "reader/{messageId}"
+    const val COMPOSE = "compose/{mode}/{messageId}"
 
     fun reader(messageId: Long) = "reader/$messageId"
+
+    /** [mode] is one of: new, reply, replyall, forward. [messageId] is -1 for a new message. */
+    fun compose(mode: String, messageId: Long) = "compose/$mode/$messageId"
 }

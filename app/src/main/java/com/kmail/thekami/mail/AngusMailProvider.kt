@@ -294,6 +294,18 @@ class AngusMailProvider(
         }
     }
 
+    override suspend fun appendMessage(
+        folder: RemoteFolder,
+        rawMime: ByteArray,
+        isRead: Boolean,
+    ): MailResult<Unit> = withStore { store ->
+        val target = store.getFolder(folder.remoteName)
+        if (!target.exists()) throw Failed(MailError.Protocol("folder_not_found"))
+        val message = MimeMessage(Session.getInstance(java.util.Properties()), ByteArrayInputStream(rawMime))
+        if (isRead) message.setFlag(Flags.Flag.SEEN, true)
+        target.appendMessages(arrayOf<Message>(message))
+    }
+
     private companion object {
         const val MAX_RAW_BYTES = 25L * 1024 * 1024
     }

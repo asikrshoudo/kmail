@@ -75,6 +75,17 @@ Known issues (reader):
 - The list preview is filled only for messages that were opened.
 - HTML sanitizer and MIME parser are tested with unit tests only, not with a wide set of real emails.
 
+Step 3.4 (compose, send, copy to Sent, reply, reply all, forward, attachments): added, verify in CI and on a device.
+
+Known issues (compose):
+- Plain text only. No rich text editor yet.
+- No contact suggestions and no draft autosave yet. Leaving with changes asks to discard.
+- The signature is a fixed text ("Sent using Kmail") that can be edited in the message. Signature settings are not built yet.
+- Sent messages are copied to the Sent folder only if the server has one. A failed copy is silent.
+- Attachment limit is 15 MB in total. Whole files are held in memory.
+- Recipients are plain text fields, not chips.
+- Reply and forward need the original message from the server or from the in-memory cache.
+
 ## Next
 
-Step 3.4: compose, send, save to Sent, reply and forward.
+Phase 4: swipe actions, multi-select, archive/delete/move, search, signatures, App Lock. Then release preparation for internal testing.

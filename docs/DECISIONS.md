@@ -74,3 +74,9 @@
 - WebView has JavaScript off and no file or content access. Link taps open a confirmation dialog that shows the full URL. Only http, https, mailto and tel are offered.
 - `MimeParser` never calls `Part.getContent()`. It reads decoded streams and chooses the charset itself, so it does not depend on the activation mailcap registry.
 - No verified-sender badge is shown, since no authentication result is checked.
+
+## Compose (Phase 3)
+- `MimeBuilder` writes messages by hand (quoted-printable body, base64 attachments, RFC 2231 file names). It does not use `MimeMessage.setContent()`, so it does not depend on the activation mailcap registry. Bcc recipients are only in the SMTP envelope.
+- No `X-Mailer` or `User-Agent` header is added.
+- After a successful send the message is appended to the Sent folder as a separate best-effort step. Sending is never reported as failed because of it.
+- Reply goes to Reply-To, else From. Replying to your own message goes to its original recipients. Reply all removes your own address.

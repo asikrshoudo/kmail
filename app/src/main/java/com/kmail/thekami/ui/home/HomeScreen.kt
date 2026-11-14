@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -25,6 +26,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,6 +69,7 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onAddAccount: () -> Unit,
     onOpenMessage: (Long) -> Unit,
+    onCompose: () -> Unit,
     modifier: Modifier = Modifier,
     vm: HomeViewModel = hiltViewModel(),
 ) {
@@ -93,6 +96,11 @@ fun HomeScreen(
         },
     ) {
         Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(onClick = onCompose) {
+                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.home_compose))
+                }
+            },
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text(greeting()) },

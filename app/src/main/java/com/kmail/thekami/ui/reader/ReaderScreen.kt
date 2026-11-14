@@ -75,6 +75,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ReaderScreen(
     onBack: () -> Unit,
+    onCompose: (String, Long) -> Unit,
     modifier: Modifier = Modifier,
     vm: ReaderViewModel = hiltViewModel(),
 ) {
@@ -95,11 +96,20 @@ fun ReaderScreen(
                 },
                 actions = {
                     if (state.message != null) {
+                        TextButton(onClick = { onCompose("reply", vm.messageId) }) { Text(stringResource(R.string.compose_reply)) }
+                        TextButton(onClick = { onCompose("forward", vm.messageId) }) { Text(stringResource(R.string.compose_forward)) }
                         Box {
                             IconButton(onClick = { menuOpen = true }) {
                                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reader_more))
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.compose_reply_all)) },
+                                    onClick = {
+                                        menuOpen = false
+                                        onCompose("replyall", vm.messageId)
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = {
                                         Text(

@@ -52,4 +52,7 @@ interface MailProvider {
         envelopeFrom: String,
         recipients: List<String>,
     ): MailResult<Unit>
+
+    /** Stores a copy of a message in [folder], for example a sent message in the Sent folder. */
+    suspend fun appendMessage(folder: RemoteFolder, rawMime: ByteArray, isRead: Boolean): MailResult<Unit>
 }

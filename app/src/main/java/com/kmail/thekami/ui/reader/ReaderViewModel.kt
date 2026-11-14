@@ -43,7 +43,7 @@ class ReaderViewModel @Inject constructor(
     private val cache: MessageBodyCache,
 ) : ViewModel() {
 
-    private val messageId: Long = savedStateHandle["messageId"] ?: -1L
+    val messageId: Long = savedStateHandle["messageId"] ?: -1L
     private val _state = MutableStateFlow(ReaderUiState())
     val state: StateFlow<ReaderUiState> = _state.asStateFlow()
     private var parsed: ParsedMessage? = null

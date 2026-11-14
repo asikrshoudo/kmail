@@ -114,4 +114,37 @@
     <string name="reader_save_failed">Couldn’t save the file</string>
     <string name="reader_missing">This message is no longer available.</string>
     <string name="reader_error_title">Couldn’t open the message</string>
+
+    <string name="home_compose">Compose</string>
+    <string name="compose_new">New message</string>
+    <string name="compose_reply">Reply</string>
+    <string name="compose_reply_all">Reply all</string>
+    <string name="compose_forward">Forward</string>
+    <string name="compose_send">Send</string>
+    <string name="compose_from">From</string>
+    <string name="compose_to">To</string>
+    <string name="compose_cc">Cc</string>
+    <string name="compose_bcc">Bcc</string>
+    <string name="compose_subject">Subject</string>
+    <string name="compose_body_hint">Write your message</string>
+    <string name="compose_show_cc">Cc/Bcc</string>
+    <string name="compose_attach">Attach file</string>
+    <string name="compose_remove_attachment">Remove %1$s</string>
+    <string name="compose_error_no_recipient">Add at least one recipient.</string>
+    <string name="compose_error_invalid_recipient">Check this address: %1$s</string>
+    <string name="compose_error_too_large">Attachments are too large. The limit is 15 MB in total.</string>
+    <string name="compose_error_send">Couldn’t send: %1$s</string>
+    <string name="compose_error_no_account">The account is no longer available.</string>
+    <string name="compose_sending">Sending…</string>
+    <string name="compose_sent">Message sent</string>
+    <string name="compose_discard_title">Discard this message?</string>
+    <string name="compose_discard_confirm">Discard</string>
+    <string name="compose_discard_keep">Keep editing</string>
+    <string name="compose_signature">Sent using Kmail</string>
+    <string name="compose_quote_header">On %1$s, %2$s wrote:</string>
+    <string name="compose_forward_header">---------- Forwarded message ----------</string>
+    <string name="compose_forward_from">From: %1$s</string>
+    <string name="compose_forward_date">Date: %1$s</string>
+    <string name="compose_forward_subject">Subject: %1$s</string>
+    <string name="compose_forward_to">To: %1$s</string>
 </resources>
