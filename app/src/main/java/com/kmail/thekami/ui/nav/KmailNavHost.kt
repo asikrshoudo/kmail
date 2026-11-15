@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.kmail.thekami.R
 import com.kmail.thekami.ui.components.LoadingState
 import com.kmail.thekami.ui.home.HomeScreen
+import com.kmail.thekami.ui.drafts.DraftsScreen
 import com.kmail.thekami.ui.settings.SettingsScreen
 import com.kmail.thekami.ui.compose.ComposeScreen
 import com.kmail.thekami.ui.reader.ReaderScreen
@@ -172,6 +173,7 @@ fun KmailNavHost(
             arguments = listOf(
                 navArgument("mode") { type = NavType.StringType },
                 navArgument("messageId") { type = NavType.LongType },
+                navArgument("draft") { type = NavType.StringType; nullable = true; defaultValue = null },
             ),
         ) {
             ComposeScreen(onClose = { navController.popBackStack() })
@@ -192,6 +194,13 @@ fun KmailNavHost(
             )
         }
 
+        composable(Routes.DRAFTS) {
+            DraftsScreen(
+                onBack = { navController.popBackStack() },
+                onOpen = { id -> navController.navigate(Routes.compose("draft", -1L, id)) },
+            )
+        }
+
         composable(Routes.HOME) {
             val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
             val homeContext = LocalContext.current
@@ -207,6 +216,7 @@ fun KmailNavHost(
                 onOpenMessage = { navController.navigate(Routes.reader(it)) },
                 onCompose = { navController.navigate(Routes.compose("new", -1L)) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenDrafts = { navController.navigate(Routes.DRAFTS) },
                 onAddAccount = {
                     vm.startNewAccount()
                     navController.navigate(Routes.CREDENTIALS)

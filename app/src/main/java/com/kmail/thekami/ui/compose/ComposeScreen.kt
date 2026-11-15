@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
@@ -62,6 +63,7 @@ fun ComposeScreen(
     val context = LocalContext.current
     var showDiscard by remember { mutableStateOf(false) }
     var fromMenu by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
     var body by remember { mutableStateOf(TextFieldValue()) }
     val sentMessage = stringResource(R.string.compose_sent)
 
@@ -75,11 +77,17 @@ fun ComposeScreen(
             onClose()
         }
     }
+    LaunchedEffect(state.closeRequested) { if (state.closeRequested) onClose() }
+
     val attachLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) vm.addAttachments(uris)
     }
-    val requestClose = { if (state.dirty && !state.sending) showDiscard = true else onClose() }
-    BackHandler(enabled = state.dirty && !state.sending) { showDiscard = true }
+    // Leaving keeps the draft: it is autosaved and listed under "Unsent drafts".
+    val leave = {
+        vm.leave()
+        onClose()
+    }
+    BackHandler(enabled = !state.sending) { leave() }
 
     Scaffold(
         modifier = modifier,
@@ -91,19 +99,34 @@ fun ComposeScreen(
                             when (vm.mode) {
                                 "reply", "replyall" -> R.string.compose_reply
                                 "forward" -> R.string.compose_forward
+                                "draft" -> R.string.compose_draft
                                 else -> R.string.compose_new
                             },
                         ),
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = requestClose) {
+                    IconButton(onClick = leave) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.reader_back))
                     }
                 },
                 actions = {
                     TextButton(onClick = vm::send, enabled = !state.sending && !state.loading) {
                         Text(stringResource(R.string.compose_send))
+                    }
+                    Box {
+                        IconButton(onClick = { moreMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                        }
+                        DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.compose_discard_confirm)) },
+                                onClick = {
+                                    moreMenu = false
+                                    showDiscard = true
+                                },
+                            )
+                        }
                     }
                 },
             )
@@ -179,10 +202,7 @@ fun ComposeScreen(
                         AssistChip(
                             onClick = { vm.removeAttachment(attachment) },
                             label = {
-                                Text(
-                                    stringResource(R.string.compose_remove_attachment, attachment.name),
-                                    maxLines = 1,
-                                )
+                                Text(stringResource(R.string.compose_remove_attachment, attachment.name), maxLines = 1)
                             },
                         )
                     }
@@ -210,9 +230,10 @@ fun ComposeScreen(
             onDismissRequest = { showDiscard = false },
             title = { Text(stringResource(R.string.compose_discard_title)) },
             confirmButton = {
-                TextButton(onClick = { showDiscard = false; onClose() }) {
-                    Text(stringResource(R.string.compose_discard_confirm))
-                }
+                TextButton(onClick = {
+                    showDiscard = false
+                    vm.discard()
+                }) { Text(stringResource(R.string.compose_discard_confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = { showDiscard = false }) {

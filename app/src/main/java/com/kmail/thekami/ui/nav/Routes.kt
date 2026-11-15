@@ -9,11 +9,13 @@ object Routes {
     const val CONNECTING = "connecting"
     const val CONNECTED = "connected"
     const val SETTINGS = "settings"
+    const val DRAFTS = "drafts"
     const val READER = "reader/{messageId}"
-    const val COMPOSE = "compose/{mode}/{messageId}"
+    const val COMPOSE = "compose/{mode}/{messageId}?draft={draft}"
 
     fun reader(messageId: Long) = "reader/$messageId"
 
-    /** [mode] is one of: new, reply, replyall, forward. [messageId] is -1 for a new message. */
-    fun compose(mode: String, messageId: Long) = "compose/$mode/$messageId"
+    /** [mode] is one of: new, reply, replyall, forward, draft. [messageId] is -1 unless replying or forwarding. */
+    fun compose(mode: String, messageId: Long, draftId: String? = null) =
+        "compose/$mode/$messageId" + (draftId?.let { "?draft=$it" } ?: "")
 }

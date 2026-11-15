@@ -138,6 +138,17 @@ Known issues (list):
 - Sort and filter apply to the loaded messages only, and they reset when the app restarts.
 - Swiping a row near the screen edge may compete with the drawer gesture. Not checked on a device.
 
+Step 8.1 on a device: build installed. Swipe, sort and filter were not checked in detail.
+
+Step 9.1 (draft autosave, unsent drafts list, signature settings): added, verify in CI and on a device.
+
+Known issues (drafts and signatures):
+- Drafts live on this device only (encrypted files). They are not saved to the server Drafts folder and do not appear on other clients.
+- A draft cannot be restored if the Keystore key is lost (for example after a lock screen reset on some devices).
+- Signatures are plain text. The clickable Play Store link needs the rich text composer, which is not built.
+- There is no way to turn off the signature for one account only; an empty override uses the default.
+- The signature is added when the composer opens. Changing the From account does not change it.
+
 ## Next
 
-Drafts autosave, signatures, contact suggestions, security-question recovery, translations.
+Contact suggestions, security-question recovery, translations.

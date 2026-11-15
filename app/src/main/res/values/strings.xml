@@ -234,4 +234,18 @@
     <string name="filter_unread">Unread only</string>
     <string name="filter_starred">Starred only</string>
     <string name="filter_attachments">With attachments</string>
+
+    <string name="compose_draft">Draft</string>
+    <string name="home_drafts">Unsent drafts</string>
+    <string name="drafts_title">Drafts on this device</string>
+    <string name="drafts_empty">No unsent drafts.</string>
+    <string name="drafts_no_recipient">(No recipient)</string>
+    <string name="drafts_delete">Delete</string>
+    <string name="settings_compose">Compose &amp; Signature</string>
+    <string name="settings_signature_enabled">Add a signature to new messages</string>
+    <string name="settings_signature_default">Default signature</string>
+    <string name="settings_signature_for">Signature for %1$s</string>
+    <string name="settings_signature_uses_default">Uses the default signature</string>
+    <string name="settings_signature_edit">Edit</string>
+    <string name="settings_signature_hint">Leave empty to use the default signature.</string>
 </resources>

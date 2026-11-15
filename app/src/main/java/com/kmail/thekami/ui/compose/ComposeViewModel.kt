@@ -7,16 +7,19 @@ import android.text.format.DateUtils
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kmail.thekami.R
 import com.kmail.thekami.data.db.FolderDao
 import com.kmail.thekami.data.db.MessageDao
 import com.kmail.thekami.data.db.MessageEntity
+import com.kmail.thekami.data.drafts.DraftStore
+import com.kmail.thekami.data.prefs.SignatureStore
 import com.kmail.thekami.data.repo.AccountRepository
 import com.kmail.thekami.data.repo.MessageBodyCache
 import com.kmail.thekami.domain.mail.MailError
 import com.kmail.thekami.domain.mail.MailResult
 import com.kmail.thekami.domain.mail.ProviderSource
 import com.kmail.thekami.domain.model.Account
+import com.kmail.thekami.domain.model.Draft
+import com.kmail.thekami.domain.model.DraftAttachment
 import com.kmail.thekami.domain.model.FolderRole
 import com.kmail.thekami.domain.model.Recipients
 import com.kmail.thekami.domain.model.RemoteFolder
@@ -27,12 +30,16 @@ import com.kmail.thekami.mail.ParsedMessage
 import com.kmail.thekami.mail.ReplyBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -63,10 +70,13 @@ data class ComposeUiState(
     val dirty: Boolean = false,
     val error: ComposeError? = null,
     val sent: Boolean = false,
+    val closeRequested: Boolean = false,
 )
 
 private const val MAX_ATTACHMENT_BYTES = 15L * 1024 * 1024
+private const val AUTOSAVE_MS = 1_500L
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class ComposeViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -76,25 +86,56 @@ class ComposeViewModel @Inject constructor(
     private val folderDao: FolderDao,
     private val providers: ProviderSource,
     private val cache: MessageBodyCache,
+    private val draftStore: DraftStore,
+    private val signatureStore: SignatureStore,
 ) : ViewModel() {
 
     val mode: String = savedStateHandle["mode"] ?: "new"
     private val sourceId: Long = savedStateHandle["messageId"] ?: -1L
+    private val openedDraftId: String? = savedStateHandle.get<String>("draft")?.takeIf { DraftStore.isValidId(it) }
+    private val draftId: String = openedDraftId ?: UUID.randomUUID().toString().replace("-", "")
 
     private val _state = MutableStateFlow(ComposeUiState())
     val state: StateFlow<ComposeUiState> = _state.asStateFlow()
 
     private var inReplyTo: String? = null
     private var references: List<String> = emptyList()
+    /** Set once the message was sent or discarded, so autosave can never bring the draft back. */
+    private var finished = false
 
     init {
-        viewModelScope.launch { prepare() }
+        viewModelScope.launch {
+            prepare()
+            _state.filter { it.dirty && !it.loading && !it.sending && !it.sent }
+                .debounce(AUTOSAVE_MS)
+                .collect { if (!finished) draftStore.save(snapshot(it)) }
+        }
     }
 
     // ---- prefill ----
 
     private suspend fun prepare() {
         val accounts = accountRepository.observeAccounts().first()
+
+        val saved = openedDraftId?.let { draftStore.load(it) }
+        if (saved != null) {
+            inReplyTo = saved.inReplyTo
+            references = saved.references
+            _state.value = ComposeUiState(
+                accounts = accounts,
+                fromId = saved.accountId?.takeIf { id -> accounts.any { it.id == id } } ?: accounts.firstOrNull()?.id,
+                to = saved.to,
+                cc = saved.cc,
+                bcc = saved.bcc,
+                showCcBcc = saved.cc.isNotBlank() || saved.bcc.isNotBlank(),
+                subject = saved.subject,
+                body = saved.body,
+                attachments = saved.attachments.map { ComposeAttachment(it.name, it.mimeType, it.bytes) },
+                loading = false,
+            )
+            return
+        }
+
         var fromId = accounts.firstOrNull()?.id
         var to = ""
         var cc = ""
@@ -102,7 +143,7 @@ class ComposeViewModel @Inject constructor(
         var quote = ""
         var attachments = emptyList<ComposeAttachment>()
 
-        val source = if (mode != "new") messageDao.getById(sourceId) else null
+        val source = if (mode == "reply" || mode == "replyall" || mode == "forward") messageDao.getById(sourceId) else null
         if (source != null) {
             fromId = source.accountId
             val own = accounts.firstOrNull { it.id == fromId }?.emailAddress.orEmpty()
@@ -129,8 +170,6 @@ class ComposeViewModel @Inject constructor(
             }
         }
 
-        val signature = context.getString(R.string.compose_signature)
-        val body = "\n\n-- \n$signature" + if (quote.isNotBlank()) "\n\n$quote" else ""
         _state.value = ComposeUiState(
             accounts = accounts,
             fromId = fromId,
@@ -138,7 +177,7 @@ class ComposeViewModel @Inject constructor(
             cc = cc,
             showCcBcc = cc.isNotBlank(),
             subject = subject,
-            body = body,
+            body = ComposeBody.initial(signatureStore.textFor(fromId), quote),
             attachments = attachments,
             loading = false,
         )
@@ -171,18 +210,21 @@ class ComposeViewModel @Inject constructor(
     }.orEmpty()
 
     private fun quoteHeader(m: ParsedMessage) = context.getString(
-        R.string.compose_quote_header,
+        com.kmail.thekami.R.string.compose_quote_header,
         formatDate(m.dateMillis),
         m.from?.display() ?: "",
     )
 
-    private fun forwardHeader(m: ParsedMessage) = listOf(
-        context.getString(R.string.compose_forward_header),
-        context.getString(R.string.compose_forward_from, m.from?.display() ?: ""),
-        context.getString(R.string.compose_forward_date, formatDate(m.dateMillis)),
-        context.getString(R.string.compose_forward_subject, m.subject),
-        context.getString(R.string.compose_forward_to, m.to.joinToString(", ") { it.display() }),
-    ).joinToString("\n")
+    private fun forwardHeader(m: ParsedMessage): String {
+        val r = com.kmail.thekami.R.string::class.java
+        return listOf(
+            context.getString(com.kmail.thekami.R.string.compose_forward_header),
+            context.getString(com.kmail.thekami.R.string.compose_forward_from, m.from?.display() ?: ""),
+            context.getString(com.kmail.thekami.R.string.compose_forward_date, formatDate(m.dateMillis)),
+            context.getString(com.kmail.thekami.R.string.compose_forward_subject, m.subject),
+            context.getString(com.kmail.thekami.R.string.compose_forward_to, m.to.joinToString(", ") { it.display() }),
+        ).joinToString("\n").also { r.hashCode() }
+    }
 
     // ---- editing ----
 
@@ -238,6 +280,34 @@ class ComposeViewModel @Inject constructor(
         ComposeAttachment(name, type, bytes)
     }.getOrNull()
 
+    // ---- drafts ----
+
+    private fun snapshot(s: ComposeUiState) = Draft(
+        id = draftId,
+        accountId = s.fromId,
+        to = s.to,
+        cc = s.cc,
+        bcc = s.bcc,
+        subject = s.subject,
+        body = s.body,
+        inReplyTo = inReplyTo,
+        references = references,
+        attachments = s.attachments.map { DraftAttachment(it.name, it.mimeType, it.bytes) },
+        updatedAtMillis = System.currentTimeMillis(),
+    )
+
+    /** Called when the user leaves the composer: the last edit is saved even if autosave has not run yet. */
+    fun leave() {
+        val s = _state.value
+        if (s.dirty && !finished && !s.sent) draftStore.saveDetached(snapshot(s))
+    }
+
+    fun discard() {
+        finished = true
+        draftStore.deleteDetached(draftId)
+        _state.update { it.copy(dirty = false, closeRequested = true) }
+    }
+
     // ---- send ----
 
     fun send() {
@@ -286,6 +356,8 @@ class ComposeViewModel @Inject constructor(
             when (val r = provider.send(raw, account.emailAddress, recipients)) {
                 is MailResult.Failure -> fail(ComposeError.SendFailed(r.error))
                 is MailResult.Success -> {
+                    finished = true
+                    draftStore.deleteDetached(draftId)
                     // The message is already sent. Failing to copy it to Sent must not look like a failure.
                     folderDao.listByAccount(account.id).firstOrNull { it.role == FolderRole.SENT }?.let { f ->
                         provider.appendMessage(RemoteFolder(f.remoteName, f.displayName, f.role), raw, isRead = true)

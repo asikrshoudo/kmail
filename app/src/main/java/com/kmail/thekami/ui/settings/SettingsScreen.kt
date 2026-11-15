@@ -122,6 +122,8 @@ fun SettingsScreen(
             TextButton(onClick = onAddAccount) { Text(stringResource(R.string.home_add_account)) }
             HorizontalDivider()
 
+            SignatureSection(accounts.orEmpty())
+
             SectionTitle(stringResource(R.string.settings_appearance))
             Text(stringResource(R.string.appearance_theme), style = MaterialTheme.typography.bodyLarge)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

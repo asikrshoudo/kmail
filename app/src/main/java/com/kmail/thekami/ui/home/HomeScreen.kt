@@ -85,6 +85,7 @@ fun HomeScreen(
     onOpenMessage: (Long) -> Unit,
     onCompose: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenDrafts: () -> Unit,
     modifier: Modifier = Modifier,
     vm: HomeViewModel = hiltViewModel(),
 ) {
@@ -112,6 +113,7 @@ fun HomeScreen(
         drawerContent = {
             Sidebar(
                 onSettings = { scope.launch { drawerState.close() }; onOpenSettings() },
+                onDrafts = { scope.launch { drawerState.close() }; onOpenDrafts() },
                 state = state,
                 onSelect = {
                     vm.select(it)
@@ -323,6 +325,7 @@ private fun folderLabel(folder: FolderEntity): String = when (folder.role) {
 @Composable
 private fun Sidebar(
     onSettings: () -> Unit,
+    onDrafts: () -> Unit,
     state: HomeUiState,
     onSelect: (MailboxSelection) -> Unit,
     onAddAccount: () -> Unit,
@@ -362,6 +365,12 @@ private fun Sidebar(
                 label = { Text(stringResource(R.string.home_settings)) },
                 selected = false,
                 onClick = onSettings,
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.home_drafts)) },
+                selected = false,
+                onClick = onDrafts,
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
             HorizontalDivider(Modifier.padding(vertical = 12.dp, horizontal = 28.dp))
