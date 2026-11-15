@@ -171,6 +171,17 @@ Known issues (recovery):
 - The recovery questions are asked for right after the PIN is set; they can be skipped and set up later in Settings.
 - Recovery logic (store) is covered by policy unit tests only. The store itself has no unit tests.
 
+Step 10.1 on a device: build installed. Recovery questions were not checked in detail.
+
+Step 11.1 (sync intervals of 5 and 10 minutes, notification opens the message, public GitHub releases, move to folder, Starred and Unread views): added, verify in CI and on a device.
+
+Known issues (11.1):
+- Intervals below 15 minutes use chained one-time work. Android may delay them (Doze), and they use more battery. There is no push or IDLE.
+- Every push to main now publishes a public GitHub release.
+- Move to folder works within one account. The moved message appears in the target after its next sync.
+- Starred and Unread views cover only messages already cached, and Unread covers inboxes only.
+- Tapping a notification restarts the activity; the lock screen still covers the app when App Lock is on.
+
 ## Next
 
-Translations for the other seven languages, then final release checks.
+Step 11.2: account settings, storage and data, search upgrade. Step 11.3: quoted reply collapse, next/previous message, offline reading, outbox. Then UI/UX pass.

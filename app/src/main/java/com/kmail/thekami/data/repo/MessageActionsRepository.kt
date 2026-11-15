@@ -54,6 +54,27 @@ class MessageActionsRepository @Inject constructor(
         return MessageActionResult.Ok
     }
 
+    /** Moves to a folder the user picked. All messages must belong to the target folder's account. */
+    suspend fun moveToFolder(ids: List<Long>, target: FolderEntity): MessageActionResult {
+        val now = System.currentTimeMillis()
+        for (batch in batches(ids)) {
+            if (batch.folder.id == target.id) continue
+            if (batch.folder.accountId != target.accountId) {
+                return MessageActionResult.Failed(MailError.Unsupported("different_account"))
+            }
+            val provider = providers.forAccount(target.accountId) ?: return MessageActionResult.Failed(null)
+            when (
+                val r = provider.moveMessages(
+                    remote(batch.folder), batch.uidValidity, batch.messages.map { it.uid }, remote(target),
+                )
+            ) {
+                is MailResult.Failure -> return MessageActionResult.Failed(r.error)
+                is MailResult.Success -> messageDao.markRemoved(batch.messages.map { it.id }, now)
+            }
+        }
+        return MessageActionResult.Ok
+    }
+
     private suspend fun flags(ids: List<Long>, isRead: Boolean?, isStarred: Boolean?): MessageActionResult {
         for (batch in batches(ids)) {
             val provider = providers.forAccount(batch.folder.accountId) ?: return MessageActionResult.Failed(null)

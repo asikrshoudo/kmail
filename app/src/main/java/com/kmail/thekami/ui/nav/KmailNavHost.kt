@@ -33,6 +33,7 @@ import com.kmail.thekami.ui.compose.ComposeScreen
 import com.kmail.thekami.ui.reader.ReaderScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.kmail.thekami.ui.setup.ConnectState
 import com.kmail.thekami.ui.setup.ConnectedScreen
 import com.kmail.thekami.ui.setup.ConnectingScreen
@@ -161,6 +162,7 @@ fun KmailNavHost(
         composable(
             Routes.READER,
             arguments = listOf(navArgument("messageId") { type = NavType.LongType }),
+            deepLinks = listOf(navDeepLink { uriPattern = "kmail://message/{messageId}" }),
         ) {
             ReaderScreen(
                 onBack = { navController.popBackStack() },

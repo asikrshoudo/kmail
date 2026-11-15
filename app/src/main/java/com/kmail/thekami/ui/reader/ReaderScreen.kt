@@ -72,6 +72,7 @@ import com.kmail.thekami.mail.ParsedMessage
 import com.kmail.thekami.ui.components.ErrorState
 import com.kmail.thekami.ui.components.LoadingState
 import com.kmail.thekami.ui.home.actionNoticeText
+import com.kmail.thekami.ui.home.folderLabel
 import com.kmail.thekami.ui.setup.messageRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -87,10 +88,28 @@ fun ReaderScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
+    var showMove by remember { mutableStateOf(false) }
     var pendingLink by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(state.finished) { if (state.finished) onBack() }
+    if (showMove) {
+        AlertDialog(
+            onDismissRequest = { showMove = false },
+            title = { Text(stringResource(R.string.move_title)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    state.folders.forEach { f ->
+                        TextButton(onClick = { showMove = false; vm.moveTo(f) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(folderLabel(f), modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showMove = false }) { Text(stringResource(R.string.reader_link_cancel)) } },
+        )
+    }
 
     Scaffold(
         modifier = modifier,
@@ -123,6 +142,13 @@ fun ReaderScreen(
                                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reader_more))
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.move_to)) },
+                                    onClick = {
+                                        menuOpen = false
+                                        showMove = true
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.compose_reply_all)) },
                                     onClick = {

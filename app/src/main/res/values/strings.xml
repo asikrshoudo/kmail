@@ -213,9 +213,9 @@
     <string name="appearance_dynamic_desc">Use colors from your wallpaper (Android 12 and newer).</string>
     <string name="settings_sync">Sync &amp; Notifications</string>
     <string name="settings_bg_sync">Background sync</string>
-    <string name="settings_bg_sync_desc">Check for new mail in the background. Android may delay this to save battery.</string>
-    <string name="settings_interval">Check every</string>
-    <string name="settings_interval_minutes">%1$d min</string>
+    <string name="settings_bg_sync_desc">Check for new mail in the background. Under 15 minutes uses more battery, and Android may still delay checks to save battery.</string>
+    <string name="settings_interval">Check every (minutes)</string>
+    <string name="settings_interval_minutes">%1$d</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_hide_content">Hide message content in notifications</string>
     <string name="notif_channel_name">New mail</string>
@@ -273,4 +273,10 @@
     <string name="recovery_continue">Continue</string>
     <string name="recovery_wrong">One or more answers are wrong.</string>
     <string name="recovery_new_pin_title">Choose a new PIN</string>
+
+    <string name="sidebar_starred">Starred</string>
+    <string name="sidebar_unread">Unread</string>
+    <string name="move_to">Move to…</string>
+    <string name="move_title">Move to folder</string>
+    <string name="move_one_account">Select messages from one account to move them.</string>
 </resources>

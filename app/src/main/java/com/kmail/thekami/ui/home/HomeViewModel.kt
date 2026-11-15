@@ -31,6 +31,8 @@ import kotlinx.coroutines.launch
 
 sealed interface MailboxSelection {
     data object Unified : MailboxSelection
+    data object Starred : MailboxSelection
+    data object Unread : MailboxSelection
     data class Folder(val id: Long) : MailboxSelection
 }
 
@@ -43,6 +45,7 @@ data class MessageItem(
     val isRead: Boolean,
     val isStarred: Boolean,
     val hasAttachments: Boolean,
+    val accountId: String = "",
 )
 
 data class SidebarAccount(val account: Account, val folders: List<FolderEntity>)
@@ -104,6 +107,8 @@ class HomeViewModel @Inject constructor(
     private val messages = selection.flatMapLatest { sel ->
         when (sel) {
             MailboxSelection.Unified -> messageDao.observeUnifiedInbox(LIST_LIMIT)
+            MailboxSelection.Starred -> messageDao.observeStarred(LIST_LIMIT)
+            MailboxSelection.Unread -> messageDao.observeUnreadInbox(LIST_LIMIT)
             is MailboxSelection.Folder -> messageDao.observeInFolder(sel.id, LIST_LIMIT)
         }
     }
@@ -187,9 +192,10 @@ class HomeViewModel @Inject constructor(
     fun loadMore() {
         if (refreshing.value) return
         val ids = when (val sel = selection.value) {
-            MailboxSelection.Unified -> uiState.value.sidebar.flatMap { it.folders }
+            MailboxSelection.Unified, MailboxSelection.Unread -> uiState.value.sidebar.flatMap { it.folders }
                 .filter { it.role == FolderRole.INBOX }.map { it.id }
             is MailboxSelection.Folder -> listOf(sel.id)
+            MailboxSelection.Starred -> emptyList()
         }.filter { it !in exhausted }
         if (ids.isEmpty()) return
         viewModelScope.launch {
@@ -243,6 +249,7 @@ class HomeViewModel @Inject constructor(
     fun setStarred(starred: Boolean) = act { actions.setStarred(it, starred) }
     fun archive() = act { actions.moveToRole(it, FolderRole.ARCHIVE) }
     fun delete() = act { actions.moveToRole(it, FolderRole.TRASH) }
+    fun moveSelected(target: FolderEntity) = act { actions.moveToFolder(it, target) }
 
     private fun MessageEntity.matches(q: String) = q.isEmpty() ||
         subject.lowercase().contains(q) ||
@@ -259,5 +266,6 @@ class HomeViewModel @Inject constructor(
         isRead = isRead,
         isStarred = isStarred,
         hasAttachments = hasAttachments,
+        accountId = accountId,
     )
 }

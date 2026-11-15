@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kmail.thekami.data.db.FolderDao
+import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.data.db.MessageDao
 import com.kmail.thekami.data.repo.MessageActionResult
 import com.kmail.thekami.data.repo.MessageActionsRepository
@@ -40,6 +41,7 @@ data class ReaderUiState(
     /** Set after archive or delete succeeded: the screen should close. */
     val finished: Boolean = false,
     val notice: MessageActionResult? = null,
+    val folders: List<FolderEntity> = emptyList(),
 )
 
 @HiltViewModel
@@ -71,7 +73,7 @@ class ReaderViewModel @Inject constructor(
                 _state.value = ReaderUiState(loading = false, missing = true)
                 return@launch
             }
-            _state.update { it.copy(starred = entity.isStarred) }
+            _state.update { it.copy(starred = entity.isStarred, folders = folderDao.listByAccount(entity.accountId)) }
             val remote = RemoteFolder(folder.remoteName, folder.displayName, folder.role)
             val raw = cache.get(entity.id) ?: when (val r = provider.fetchRawMessage(remote, entity.uidValidity, entity.uid)) {
                 is MailResult.Failure -> {
@@ -106,6 +108,15 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             when (val r = actions.setStarred(listOf(messageId), target)) {
                 MessageActionResult.Ok -> _state.update { it.copy(starred = target, notice = null) }
+                else -> _state.update { it.copy(notice = r) }
+            }
+        }
+    }
+
+    fun moveTo(target: FolderEntity) {
+        viewModelScope.launch {
+            when (val r = actions.moveToFolder(listOf(messageId), target)) {
+                MessageActionResult.Ok -> _state.update { it.copy(finished = true) }
                 else -> _state.update { it.copy(notice = r) }
             }
         }

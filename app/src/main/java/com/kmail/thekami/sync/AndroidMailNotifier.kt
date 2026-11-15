@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -59,7 +60,7 @@ class AndroidMailNotifier @Inject constructor(
                     .setContentText(text)
                     .setSubText(account)
                     .setGroup(accountId)
-                    .setContentIntent(open)
+                    .setContentIntent(openMessage(m.id))
                     .setAutoCancel(true)
                     .build()
                 manager.notify(m.id.toInt(), notification)
@@ -79,6 +80,15 @@ class AndroidMailNotifier @Inject constructor(
             }
         }
     }
+
+    /** Opens this message in the reader. */
+    private fun openMessage(id: Long): PendingIntent = PendingIntent.getActivity(
+        context,
+        id.toInt(),
+        Intent(Intent.ACTION_VIEW, Uri.parse("kmail://message/$id"), context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < 26) return

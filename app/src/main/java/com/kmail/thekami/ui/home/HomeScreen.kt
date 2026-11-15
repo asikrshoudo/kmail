@@ -93,6 +93,7 @@ fun HomeScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var menuOpen by remember { mutableStateOf(false) }
+    var showMove by remember { mutableStateOf(false) }
     val selecting = state.selectedIds.isNotEmpty()
     val listState = rememberLazyListState()
     val nearEnd by remember {
@@ -105,6 +106,9 @@ fun HomeScreen(
         if (nearEnd && state.messages.isNotEmpty()) vm.loadMore()
     }
     BackHandler(enabled = selecting) { vm.clearSelection() }
+    if (showMove) {
+        MoveDialog(state, onPick = { vm.moveSelected(it); showMove = false }, onDismiss = { showMove = false })
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -144,6 +148,7 @@ fun HomeScreen(
                         onMarkRead = vm::markRead,
                         onStar = vm::setStarred,
                         onSelectAll = vm::selectAll,
+                        onMove = { showMove = true },
                     )
                 } else {
                     CenterAlignedTopAppBar(
@@ -249,6 +254,7 @@ private fun SelectionBar(
     onMarkRead: (Boolean) -> Unit,
     onStar: (Boolean) -> Unit,
     onSelectAll: () -> Unit,
+    onMove: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     TopAppBar(
@@ -273,6 +279,7 @@ private fun SelectionBar(
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_star)) }, onClick = { menu = false; onStar(true) })
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_unstar)) }, onClick = { menu = false; onStar(false) })
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_select_all)) }, onClick = { menu = false; onSelectAll() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.move_to)) }, onClick = { menu = false; onMove() })
                 }
             }
         },
@@ -312,7 +319,7 @@ private fun greeting(): String {
 }
 
 @Composable
-private fun folderLabel(folder: FolderEntity): String = when (folder.role) {
+fun folderLabel(folder: FolderEntity): String = when (folder.role) {
     FolderRole.INBOX -> stringResource(R.string.role_inbox)
     FolderRole.SENT -> stringResource(R.string.role_sent)
     FolderRole.DRAFTS -> stringResource(R.string.role_drafts)
@@ -341,6 +348,18 @@ private fun Sidebar(
                 label = { Text(stringResource(R.string.home_all_inboxes)) },
                 selected = state.selection is MailboxSelection.Unified,
                 onClick = { onSelect(MailboxSelection.Unified) },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.sidebar_starred)) },
+                selected = state.selection is MailboxSelection.Starred,
+                onClick = { onSelect(MailboxSelection.Starred) },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.sidebar_unread)) },
+                selected = state.selection is MailboxSelection.Unread,
+                onClick = { onSelect(MailboxSelection.Unread) },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
             state.sidebar.forEach { entry ->
@@ -553,4 +572,33 @@ private fun SwipeableMessageRow(
     ) {
         MessageRow(item = item, selected = selected, onClick = onClick, onLongClick = onLongClick)
     }
+}
+
+@Composable
+private fun MoveDialog(state: HomeUiState, onPick: (FolderEntity) -> Unit, onDismiss: () -> Unit) {
+    val accounts = state.messages.filter { it.id in state.selectedIds }.map { it.accountId }.distinct()
+    val folders = if (accounts.size == 1) {
+        state.sidebar.firstOrNull { it.account.id == accounts[0] }?.folders.orEmpty()
+    } else {
+        emptyList()
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.move_title)) },
+        text = {
+            if (folders.isEmpty()) {
+                Text(stringResource(R.string.move_one_account))
+            } else {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    folders.forEach { folder ->
+                        TextButton(onClick = { onPick(folder) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(folderLabel(folder), modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.reader_link_cancel)) } },
+    )
 }

@@ -18,13 +18,21 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         fun backgroundSync(): BackgroundSync
         fun accounts(): AccountRepository
         fun prefs(): SyncPrefs
+        fun scheduler(): SyncScheduler
     }
 
     override suspend fun doWork(): Result {
         val entry = EntryPointAccessors.fromApplication(applicationContext, Entry::class.java)
-        val accounts = entry.accounts().observeAccounts().first()
-        if (accounts.isEmpty()) return Result.success()
-        val ok = entry.backgroundSync().run(accounts, entry.prefs().state.value.notifications)
-        return if (ok) Result.success() else Result.retry()
+        val settings = entry.prefs().state.value
+        val chained = settings.backgroundSync && settings.intervalMinutes < 15
+        try {
+            val accounts = entry.accounts().observeAccounts().first()
+            if (accounts.isEmpty()) return Result.success()
+            val ok = entry.backgroundSync().run(accounts, settings.notifications)
+            // A chained run always succeeds: the next run is already planned, retrying would double it.
+            return if (ok || chained) Result.success() else Result.retry()
+        } finally {
+            if (chained) entry.scheduler().scheduleNext()
+        }
     }
 }

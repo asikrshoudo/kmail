@@ -92,4 +92,18 @@ interface MessageDao {
             "GROUP BY fromAddress ORDER BY COUNT(*) DESC LIMIT :limit",
     )
     suspend fun suggestSenders(q: String, limit: Int): List<AddressSuggestion>
+
+    @Query(
+        "SELECT m.* FROM messages m JOIN folders f ON f.id = m.folderId " +
+            "WHERE m.isStarred = 1 AND m.uidValidity = f.uidValidity AND m.removedAtMillis IS NULL " +
+            "AND f.role NOT IN ('TRASH', 'SPAM') ORDER BY m.receivedAtMillis DESC, m.uid DESC LIMIT :limit",
+    )
+    fun observeStarred(limit: Int): Flow<List<MessageEntity>>
+
+    @Query(
+        "SELECT m.* FROM messages m JOIN folders f ON f.id = m.folderId " +
+            "WHERE f.role = 'INBOX' AND m.isRead = 0 AND m.uidValidity = f.uidValidity AND m.removedAtMillis IS NULL " +
+            "ORDER BY m.receivedAtMillis DESC, m.uid DESC LIMIT :limit",
+    )
+    fun observeUnreadInbox(limit: Int): Flow<List<MessageEntity>>
 }

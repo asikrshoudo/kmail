@@ -151,7 +151,7 @@ fun SettingsScreen(
             if (sync.backgroundSync) {
                 Text(stringResource(R.string.settings_interval), style = MaterialTheme.typography.bodyLarge)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(15, 30, 60).forEach { minutes ->
+                    listOf(5, 10, 15, 30, 60).forEach { minutes ->
                         FilterChip(
                             selected = sync.intervalMinutes == minutes,
                             onClick = { vm.setInterval(minutes) },

@@ -131,4 +131,22 @@ class MessageActionsRepositoryTest {
         assertEquals(MessageActionResult.Ok, repo.moveToRole(listOf(3), FolderRole.ARCHIVE))
         assertTrue(provider.moveCalls.isEmpty())
     }
+
+    @Test
+    fun moveToFolderMovesAndHidesMessages() = runTest {
+        val (_, archive, _) = seed()
+        val target = folders.getById(archive)!!
+        assertEquals(MessageActionResult.Ok, repo.moveToFolder(listOf(1, 2), target))
+        assertEquals(listOf(listOf(10L, 11L) to "Archive"), provider.moveCalls)
+        assertTrue(messages.rows.all { it.removedAtMillis != null })
+    }
+
+    @Test
+    fun moveToFolderRejectsAnotherAccountWithoutTouchingTheServer() = runTest {
+        seed()
+        val other = FolderEntity(id = 99, accountId = "b", remoteName = "X", displayName = "X", role = FolderRole.CUSTOM)
+        assertTrue(repo.moveToFolder(listOf(1), other) is MessageActionResult.Failed)
+        assertTrue(provider.moveCalls.isEmpty())
+        assertTrue(messages.rows.all { it.removedAtMillis == null })
+    }
 }

@@ -82,6 +82,6 @@ jobs:
           APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
           cp "$APK" "kmail-${VERSION_NAME}-build${RUN_NUMBER}.apk"
           gh release create "v${VERSION_NAME}-build.${RUN_NUMBER}" \
-            --target "$GITHUB_SHA" --prerelease --generate-notes \
+            --target "$GITHUB_SHA" --generate-notes --latest \
             --title "Kmail ${VERSION_NAME} (build ${RUN_NUMBER})" \
             "kmail-${VERSION_NAME}-build${RUN_NUMBER}.apk"
