@@ -56,9 +56,14 @@ data class HomeUiState(
     val error: MailError? = null,
     val selectedIds: Set<Long> = emptySet(),
     val notice: MessageActionResult? = null,
+    val options: ListOptions = ListOptions(),
 )
 
-private data class Extras(val selected: Set<Long> = emptySet(), val notice: MessageActionResult? = null)
+private data class Extras(
+    val selected: Set<Long> = emptySet(),
+    val notice: MessageActionResult? = null,
+    val options: ListOptions = ListOptions(),
+)
 
 private data class Chrome(
     val selection: MailboxSelection,
@@ -120,7 +125,7 @@ class HomeViewModel @Inject constructor(
             )
         }
         val q = c.query.trim().lowercase()
-        val items = msgs.filter { it.matches(q) }.map { it.toItem() }
+        val items = ListOptions.apply(msgs.filter { it.matches(q) }.map { it.toItem() }, c.extras.options)
         HomeUiState(
             selection = c.selection,
             sidebar = sidebar,
@@ -131,6 +136,7 @@ class HomeViewModel @Inject constructor(
             // Messages that disappeared (moved, deleted) cannot stay selected.
             selectedIds = c.extras.selected intersect items.map { it.id }.toSet(),
             notice = c.extras.notice,
+            options = c.extras.options,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -144,7 +150,7 @@ class HomeViewModel @Inject constructor(
 
     fun select(sel: MailboxSelection) {
         selection.value = sel
-        extras.value = Extras()
+        extras.update { Extras(options = it.options) }
         if (sel is MailboxSelection.Folder) {
             viewModelScope.launch {
                 refreshing.value = true
@@ -192,6 +198,21 @@ class HomeViewModel @Inject constructor(
             results.filter { it.second.noMore }.forEach { exhausted += it.first }
             error.value = results.firstNotNullOfOrNull { it.second.error }
             refreshing.value = false
+        }
+    }
+
+    fun setSort(sort: SortOrder) = extras.update { it.copy(options = it.options.copy(sort = sort)) }
+
+    fun setFilter(filter: ListFilter) = extras.update { it.copy(options = it.options.copy(filter = filter)) }
+
+    fun archiveOne(id: Long) = actOn(listOf(id)) { actions.moveToRole(it, FolderRole.ARCHIVE) }
+
+    fun deleteOne(id: Long) = actOn(listOf(id)) { actions.moveToRole(it, FolderRole.TRASH) }
+
+    private fun actOn(ids: List<Long>, block: suspend (List<Long>) -> MessageActionResult) {
+        viewModelScope.launch {
+            val result = block(ids)
+            extras.update { it.copy(notice = result.takeIf { r -> r != MessageActionResult.Ok }) }
         }
     }
 

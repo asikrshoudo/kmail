@@ -46,6 +46,10 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -153,6 +157,7 @@ fun HomeScreen(
                                     Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
                                 }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    SortFilterItems(state.options, vm::setSort, vm::setFilter) { menuOpen = false }
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.home_refresh)) },
                                         onClick = { menuOpen = false; vm.refresh() },
@@ -214,7 +219,10 @@ fun HomeScreen(
                             }
                         } else {
                             items(state.messages, key = { it.id }) { item ->
-                                MessageRow(
+                                SwipeableMessageRow(
+                                    enabled = !selecting,
+                                    onArchive = { vm.archiveOne(item.id) },
+                                    onDelete = { vm.deleteOne(item.id) },
                                     item = item,
                                     selected = item.id in state.selectedIds,
                                     onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
@@ -447,5 +455,93 @@ private fun MessageRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SortFilterItems(
+    options: ListOptions,
+    onSort: (SortOrder) -> Unit,
+    onFilter: (ListFilter) -> Unit,
+    onDone: () -> Unit,
+) {
+    SortOrder.entries.forEach { sort ->
+        val label = when (sort) {
+            SortOrder.NEWEST -> R.string.sort_newest
+            SortOrder.OLDEST -> R.string.sort_oldest
+            SortOrder.UNREAD_FIRST -> R.string.sort_unread_first
+            SortOrder.READ_FIRST -> R.string.sort_read_first
+        }
+        DropdownMenuItem(
+            text = { Text(stringResource(label)) },
+            trailingIcon = { if (options.sort == sort) Text("\u2713") },
+            onClick = { onSort(sort); onDone() },
+        )
+    }
+    HorizontalDivider()
+    ListFilter.entries.forEach { filter ->
+        val label = when (filter) {
+            ListFilter.ALL -> R.string.filter_all
+            ListFilter.UNREAD -> R.string.filter_unread
+            ListFilter.STARRED -> R.string.filter_starred
+            ListFilter.ATTACHMENTS -> R.string.filter_attachments
+        }
+        DropdownMenuItem(
+            text = { Text(stringResource(label)) },
+            trailingIcon = { if (options.filter == filter) Text("\u2713") },
+            onClick = { onFilter(filter); onDone() },
+        )
+    }
+    HorizontalDivider()
+}
+
+/** Swipe right to archive, left to delete. The row snaps back; it disappears when the server accepted the action. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableMessageRow(
+    enabled: Boolean,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    item: MessageItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> onArchive()
+                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                SwipeToDismissBoxValue.Settled -> Unit
+            }
+            false
+        },
+    )
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = enabled,
+        enableDismissFromEndToStart = enabled,
+        backgroundContent = {
+            val archive = state.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+            val delete = state.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        when {
+                            archive -> MaterialTheme.colorScheme.primaryContainer
+                            delete -> MaterialTheme.colorScheme.errorContainer
+                            else -> Color.Transparent
+                        },
+                    )
+                    .padding(horizontal = 24.dp),
+                contentAlignment = if (delete) Alignment.CenterEnd else Alignment.CenterStart,
+            ) {
+                if (archive) Text(stringResource(R.string.home_archive), style = MaterialTheme.typography.titleSmall)
+                if (delete) Text(stringResource(R.string.home_delete), style = MaterialTheme.typography.titleSmall)
+            }
+        },
+    ) {
+        MessageRow(item = item, selected = selected, onClick = onClick, onLongClick = onLongClick)
     }
 }

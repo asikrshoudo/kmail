@@ -225,4 +225,13 @@
         <item quantity="one">%1$d new message</item>
         <item quantity="other">%1$d new messages</item>
     </plurals>
+
+    <string name="sort_newest">Newest first</string>
+    <string name="sort_oldest">Oldest first</string>
+    <string name="sort_unread_first">Unread first</string>
+    <string name="sort_read_first">Read first</string>
+    <string name="filter_all">All mail</string>
+    <string name="filter_unread">Unread only</string>
+    <string name="filter_starred">Starred only</string>
+    <string name="filter_attachments">With attachments</string>
 </resources>

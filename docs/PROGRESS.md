@@ -129,6 +129,15 @@ Known issues (sync):
 - Folders other than the inbox are synced only when opened.
 - Server-side deletions hide the cached row. Hidden rows are never purged yet.
 
+Step 7.1 on a device: build installed. Reconcile and load-more were not checked in detail.
+
+Step 8.1 (swipe to archive or delete, sort and filter menu): added, verify in CI and on a device.
+
+Known issues (list):
+- Swipe actions are fixed (right archives, left deletes). They are not configurable yet.
+- Sort and filter apply to the loaded messages only, and they reset when the app restarts.
+- Swiping a row near the screen edge may compete with the drawer gesture. Not checked on a device.
+
 ## Next
 
-Swipe actions and sort/filter, drafts autosave, signatures, contact suggestions, security-question recovery, translations.
+Drafts autosave, signatures, contact suggestions, security-question recovery, translations.
