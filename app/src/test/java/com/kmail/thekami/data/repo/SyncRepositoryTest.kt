@@ -1,5 +1,6 @@
 package com.kmail.thekami.data.repo
 
+import com.kmail.thekami.data.db.AddressSuggestion
 import com.kmail.thekami.data.db.FolderDao
 import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.data.db.MessageDao
@@ -82,6 +83,7 @@ internal class FakeMessageDao : MessageDao {
     override fun observeUnifiedInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
     override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
+    override suspend fun suggestSenders(q: String, limit: Int): List<AddressSuggestion> = emptyList()
     override suspend fun maxId(): Long = rows.maxOfOrNull { it.id } ?: 0L
     override suspend fun minUid(folderId: Long, uidValidity: Long): Long? =
         rows.filter { it.folderId == folderId && it.uidValidity == uidValidity }.minOfOrNull { it.uid }

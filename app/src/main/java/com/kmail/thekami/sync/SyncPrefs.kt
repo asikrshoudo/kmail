@@ -27,6 +27,10 @@ class SyncPrefs @Inject constructor(
         get() = prefs.getBoolean("asked_permission", false)
         set(value) = prefs.edit().putBoolean("asked_permission", value).apply()
 
+    var askedContactsPermission: Boolean
+        get() = prefs.getBoolean("asked_contacts", false)
+        set(value) = prefs.edit().putBoolean("asked_contacts", value).apply()
+
     fun update(transform: (SyncSettings) -> SyncSettings) {
         val next = transform(_state.value)
         prefs.edit()

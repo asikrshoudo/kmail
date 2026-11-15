@@ -10,7 +10,11 @@ import androidx.lifecycle.viewModelScope
 import com.kmail.thekami.data.db.FolderDao
 import com.kmail.thekami.data.db.MessageDao
 import com.kmail.thekami.data.db.MessageEntity
+import com.kmail.thekami.data.contacts.ContactSuggester
+import com.kmail.thekami.data.contacts.RecentRecipients
+import com.kmail.thekami.data.contacts.Suggestion
 import com.kmail.thekami.data.drafts.DraftStore
+import com.kmail.thekami.sync.SyncPrefs
 import com.kmail.thekami.data.prefs.SignatureStore
 import com.kmail.thekami.data.repo.AccountRepository
 import com.kmail.thekami.data.repo.MessageBodyCache
@@ -34,6 +38,8 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,6 +77,7 @@ data class ComposeUiState(
     val error: ComposeError? = null,
     val sent: Boolean = false,
     val closeRequested: Boolean = false,
+    val suggestions: List<Suggestion> = emptyList(),
 )
 
 private const val MAX_ATTACHMENT_BYTES = 15L * 1024 * 1024
@@ -88,6 +95,9 @@ class ComposeViewModel @Inject constructor(
     private val cache: MessageBodyCache,
     private val draftStore: DraftStore,
     private val signatureStore: SignatureStore,
+    private val contactSuggester: ContactSuggester,
+    private val recentRecipients: RecentRecipients,
+    private val syncPrefs: SyncPrefs,
 ) : ViewModel() {
 
     val mode: String = savedStateHandle["mode"] ?: "new"
@@ -216,14 +226,13 @@ class ComposeViewModel @Inject constructor(
     )
 
     private fun forwardHeader(m: ParsedMessage): String {
-        val r = com.kmail.thekami.R.string::class.java
         return listOf(
             context.getString(com.kmail.thekami.R.string.compose_forward_header),
             context.getString(com.kmail.thekami.R.string.compose_forward_from, m.from?.display() ?: ""),
             context.getString(com.kmail.thekami.R.string.compose_forward_date, formatDate(m.dateMillis)),
             context.getString(com.kmail.thekami.R.string.compose_forward_subject, m.subject),
             context.getString(com.kmail.thekami.R.string.compose_forward_to, m.to.joinToString(", ") { it.display() }),
-        ).joinToString("\n").also { r.hashCode() }
+        ).joinToString("\n")
     }
 
     // ---- editing ----
@@ -233,9 +242,18 @@ class ComposeViewModel @Inject constructor(
     }
 
     fun onFrom(accountId: String) = edit { it.copy(fromId = accountId) }
-    fun onTo(value: String) = edit { it.copy(to = value) }
-    fun onCc(value: String) = edit { it.copy(cc = value) }
-    fun onBcc(value: String) = edit { it.copy(bcc = value) }
+    fun onTo(value: String) {
+        edit { it.copy(to = value) }
+        requestSuggestions(RecipientKind.TO, value)
+    }
+    fun onCc(value: String) {
+        edit { it.copy(cc = value) }
+        requestSuggestions(RecipientKind.CC, value)
+    }
+    fun onBcc(value: String) {
+        edit { it.copy(bcc = value) }
+        requestSuggestions(RecipientKind.BCC, value)
+    }
     fun onSubject(value: String) = edit { it.copy(subject = value) }
     fun onBody(value: String) = edit { it.copy(body = value) }
     fun showCcBcc() = _state.update { it.copy(showCcBcc = true) }
@@ -279,6 +297,53 @@ class ComposeViewModel @Inject constructor(
         } ?: return@runCatching null
         ComposeAttachment(name, type, bytes)
     }.getOrNull()
+
+    // ---- recipient suggestions ----
+
+    private var activeField = RecipientKind.TO
+    private var suggestJob: Job? = null
+
+    private fun textOf(kind: RecipientKind) = when (kind) {
+        RecipientKind.TO -> _state.value.to
+        RecipientKind.CC -> _state.value.cc
+        RecipientKind.BCC -> _state.value.bcc
+    }
+
+    fun onFocusField(kind: RecipientKind) = requestSuggestions(kind, textOf(kind))
+
+    fun refreshSuggestions() = requestSuggestions(activeField, textOf(activeField))
+
+    /** True only once, so the contacts permission is asked a single time. */
+    fun takeContactsPrompt(): Boolean {
+        if (syncPrefs.askedContactsPermission) return false
+        syncPrefs.askedContactsPermission = true
+        return true
+    }
+
+    private fun requestSuggestions(kind: RecipientKind, text: String) {
+        activeField = kind
+        suggestJob?.cancel()
+        val token = RecipientToken.current(text)
+        if (token.length < 2) {
+            _state.update { it.copy(suggestions = emptyList()) }
+            return
+        }
+        suggestJob = viewModelScope.launch {
+            delay(150)
+            val found = contactSuggester.suggest(token, taken = Recipients.parse(text).valid.toSet())
+            _state.update { it.copy(suggestions = found) }
+        }
+    }
+
+    fun pickSuggestion(suggestion: Suggestion) {
+        when (activeField) {
+            RecipientKind.TO -> edit { it.copy(to = RecipientToken.replace(it.to, suggestion.address)) }
+            RecipientKind.CC -> edit { it.copy(cc = RecipientToken.replace(it.cc, suggestion.address)) }
+            RecipientKind.BCC -> edit { it.copy(bcc = RecipientToken.replace(it.bcc, suggestion.address)) }
+        }
+        suggestJob?.cancel()
+        _state.update { it.copy(suggestions = emptyList()) }
+    }
 
     // ---- drafts ----
 
@@ -357,6 +422,7 @@ class ComposeViewModel @Inject constructor(
                 is MailResult.Failure -> fail(ComposeError.SendFailed(r.error))
                 is MailResult.Success -> {
                     finished = true
+                    recentRecipients.add(recipients)
                     draftStore.deleteDetached(draftId)
                     // The message is already sent. Failing to copy it to Sent must not look like a failure.
                     folderDao.listByAccount(account.id).firstOrNull { it.role == FolderRole.SENT }?.let { f ->

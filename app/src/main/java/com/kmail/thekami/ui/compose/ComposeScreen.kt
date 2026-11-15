@@ -29,6 +29,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.font.FontFamily
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import com.kmail.thekami.data.contacts.Suggestion
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -66,6 +74,13 @@ fun ComposeScreen(
     var moreMenu by remember { mutableStateOf(false) }
     var body by remember { mutableStateOf(TextFieldValue()) }
     val sentMessage = stringResource(R.string.compose_sent)
+    val contactsPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshSuggestions() }
+    val focusField = { kind: RecipientKind ->
+        vm.onFocusField(kind)
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED && vm.takeContactsPrompt()) {
+            contactsPermission.launch(Manifest.permission.READ_CONTACTS)
+        }
+    }
 
     // Put the cursor at the top of the prefilled body, above signature and quote.
     LaunchedEffect(state.loading) {
@@ -178,15 +193,16 @@ fun ComposeScreen(
                 }
             }
 
-            RecipientField(R.string.compose_to, state.to, vm::onTo) {
+            RecipientField(R.string.compose_to, state.to, vm::onTo, onFocus = { focusField(RecipientKind.TO) }) {
                 if (!state.showCcBcc) {
                     TextButton(onClick = vm::showCcBcc) { Text(stringResource(R.string.compose_show_cc)) }
                 }
             }
             if (state.showCcBcc) {
-                RecipientField(R.string.compose_cc, state.cc, vm::onCc)
-                RecipientField(R.string.compose_bcc, state.bcc, vm::onBcc)
+                RecipientField(R.string.compose_cc, state.cc, vm::onCc, onFocus = { focusField(RecipientKind.CC) })
+                RecipientField(R.string.compose_bcc, state.bcc, vm::onBcc, onFocus = { focusField(RecipientKind.BCC) })
             }
+            SuggestionPanel(state.suggestions, vm::pickSuggestion)
 
             OutlinedTextField(
                 value = state.subject,
@@ -249,12 +265,13 @@ private fun RecipientField(
     labelRes: Int,
     value: String,
     onChange: (String) -> Unit,
+    onFocus: () -> Unit = {},
     trailing: @Composable () -> Unit = {},
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFocus() },
         label = { Text(stringResource(labelRes)) },
         trailingIcon = trailing,
         keyboardOptions = KeyboardOptions(
@@ -263,4 +280,28 @@ private fun RecipientField(
             keyboardType = KeyboardType.Email,
         ),
     )
+}
+
+@Composable
+private fun SuggestionPanel(suggestions: List<Suggestion>, onPick: (Suggestion) -> Unit) {
+    if (suggestions.isEmpty()) return
+    Surface(shape = MaterialTheme.shapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+        Column {
+            suggestions.forEach { s ->
+                Column(
+                    Modifier.fillMaxWidth().clickable { onPick(s) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(s.name ?: s.address, style = MaterialTheme.typography.bodyMedium)
+                    if (s.name != null) {
+                        Text(
+                            s.address,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

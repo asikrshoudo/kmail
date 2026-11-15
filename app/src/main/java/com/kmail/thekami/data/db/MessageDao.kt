@@ -85,4 +85,11 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE folderId = :folderId AND uidValidity = :uidValidity AND removedAtMillis IS NULL")
     suspend fun listLive(folderId: Long, uidValidity: Long): List<MessageEntity>
+
+    @Query(
+        "SELECT fromAddress AS address, MAX(fromName) AS name FROM messages " +
+            "WHERE fromAddress LIKE '%' || :q || '%' OR fromName LIKE '%' || :q || '%' " +
+            "GROUP BY fromAddress ORDER BY COUNT(*) DESC LIMIT :limit",
+    )
+    suspend fun suggestSenders(q: String, limit: Int): List<AddressSuggestion>
 }

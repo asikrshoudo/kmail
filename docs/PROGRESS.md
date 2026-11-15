@@ -149,6 +149,16 @@ Known issues (drafts and signatures):
 - There is no way to turn off the signature for one account only; an empty override uses the default.
 - The signature is added when the composer opens. Changing the From account does not change it.
 
+Step 9.1 on a device: build installed. Drafts and signatures were not checked in detail.
+
+Step 9.2 (recipient suggestions from sent addresses, cached senders and optional phone contacts): added, verify in CI and on a device.
+
+Known issues (suggestions):
+- Phone contacts need the READ_CONTACTS permission, which is asked once when the To field first gets focus. Without it, the other two sources still work.
+- Suggestions are matched by simple substring. No ranking by how recently a contact was used, except that sent addresses come first.
+- Sent addresses are remembered only for messages sent from this app version on.
+- Play Console: READ_CONTACTS is used on the device only and nothing is uploaded; answer the Data safety form accordingly.
+
 ## Next
 
-Contact suggestions, security-question recovery, translations.
+Security-question recovery for App Lock, translations, final release checks.
