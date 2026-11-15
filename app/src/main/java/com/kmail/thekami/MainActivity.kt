@@ -18,6 +18,7 @@ import com.kmail.thekami.data.security.AppLockStore
 import com.kmail.thekami.data.security.PinVerify
 import com.kmail.thekami.ui.lock.Biometric
 import com.kmail.thekami.ui.lock.LockScreen
+import com.kmail.thekami.ui.lock.RecoveryActions
 import com.kmail.thekami.ui.nav.KmailNavHost
 import com.kmail.thekami.ui.theme.AppearanceStore
 import com.kmail.thekami.ui.theme.KmailTheme
@@ -58,6 +59,16 @@ class MainActivity : AppCompatActivity() {
                         if (locked) {
                             LockScreen(
                                 biometricAvailable = lockStore.biometricEnabled && Biometric.isAvailable(this@MainActivity),
+                                recovery = if (lockStore.hasRecovery) {
+                                    RecoveryActions(
+                                        questions = lockStore.recoveryQuestions(),
+                                        verify = { answers -> lockStore.verifyRecovery(answers) },
+                                        setNewPin = { pin, confirm -> lockStore.changePin(pin, confirm) },
+                                        onDone = { lockManager.unlock() },
+                                    )
+                                } else {
+                                    null
+                                },
                                 onVerify = { pin ->
                                     lockStore.verify(pin).also { if (it is PinVerify.Ok) lockManager.unlock() }
                                 },

@@ -43,12 +43,14 @@ fun LockScreen(
     biometricAvailable: Boolean,
     onVerify: suspend (String) -> PinVerify,
     onBiometric: () -> Unit,
+    recovery: RecoveryActions? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var pin by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<PinVerify?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var showRecovery by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     BackHandler { (context as? Activity)?.moveTaskToBack(true) }
@@ -103,6 +105,13 @@ fun LockScreen(
             if (biometricAvailable) {
                 TextButton(onClick = onBiometric) { Text(stringResource(R.string.lock_biometric)) }
             }
+            if (recovery != null) {
+                TextButton(onClick = { showRecovery = true }) { Text(stringResource(R.string.lock_forgot)) }
+            }
         }
+    }
+
+    if (showRecovery && recovery != null) {
+        RecoveryFlow(recovery) { showRecovery = false }
     }
 }

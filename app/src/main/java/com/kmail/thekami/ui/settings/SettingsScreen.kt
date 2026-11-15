@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 private sealed interface SettingsDialog {
     data object SetPin : SettingsDialog
     data object DisableLock : SettingsDialog
+    data object Recovery : SettingsDialog
     data class Remove(val account: Account) : SettingsDialog
 }
 
@@ -190,6 +191,19 @@ fun SettingsScreen(
                         Switch(checked = lock.biometric, onCheckedChange = vm::setBiometric)
                     }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_recovery), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(if (lock.hasRecovery) R.string.settings_recovery_on else R.string.settings_recovery_off),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(onClick = { dialogError = null; dialog = SettingsDialog.Recovery }) {
+                        Text(stringResource(if (lock.hasRecovery) R.string.settings_recovery_change else R.string.settings_recovery_setup))
+                    }
+                }
                 Text(stringResource(R.string.settings_auto_lock), style = MaterialTheme.typography.bodyLarge)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0, 60, 300, 900).forEach { seconds ->
@@ -250,7 +264,7 @@ fun SettingsScreen(
             onConfirm = { v ->
                 scope.launch {
                     when (vm.enableLock(v[0], v[1])) {
-                        PinSetResult.OK -> dialog = null
+                        PinSetResult.OK -> dialog = SettingsDialog.Recovery
                         PinSetResult.FORMAT -> dialogError = errFormat
                         PinSetResult.WEAK -> dialogError = errWeak
                         PinSetResult.MISMATCH -> dialogError = errMismatch
@@ -309,6 +323,10 @@ fun SettingsScreen(
                 )
             }
         }
+        SettingsDialog.Recovery -> RecoverySetupDialog(
+            onSave = { q1, a1, q2, a2 -> vm.setRecovery(q1, a1, q2, a2) },
+            onDismiss = { dialog = null },
+        )
         null -> Unit
     }
 }

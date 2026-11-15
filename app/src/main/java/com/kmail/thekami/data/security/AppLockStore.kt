@@ -70,6 +70,66 @@ class AppLockStore @Inject constructor(
         return if (wait > 0) PinVerify.Locked(wait) else PinVerify.Wrong
     }
 
+    // ---- recovery questions ----
+
+    val hasRecovery: Boolean get() = prefs.getInt(KEY_RQ_COUNT, 0) > 0
+
+    fun recoveryQuestions(): List<String> =
+        (0 until prefs.getInt(KEY_RQ_COUNT, 0)).mapNotNull { prefs.getString("rq_q_$it", null) }
+
+    /** Returns the first problem with the questions or answers, or null once they are saved. */
+    suspend fun setRecovery(questions: List<String>, answers: List<String>): RecoveryPolicy.Problem? {
+        RecoveryPolicy.checkAll(questions, answers)?.let { return it }
+        withContext(Dispatchers.Default) {
+            val edit = prefs.edit().putInt(KEY_RQ_COUNT, questions.size)
+            questions.forEachIndexed { i, question ->
+                val salt = PinPolicy.newSalt()
+                val hash = PinPolicy.hash(RecoveryPolicy.normalize(answers[i]), salt)
+                edit.putString("rq_q_$i", question.trim())
+                    .putString("rq_s_$i", Base64.getEncoder().encodeToString(salt))
+                    .putString("rq_h_$i", Base64.getEncoder().encodeToString(hash))
+            }
+            edit.putInt(KEY_RQ_FAILS, 0).putLong(KEY_RQ_UNTIL, 0L).commit()
+        }
+        return null
+    }
+
+    suspend fun verifyRecovery(answers: List<String>, nowMillis: Long = System.currentTimeMillis()): PinVerify {
+        val until = prefs.getLong(KEY_RQ_UNTIL, 0L)
+        if (nowMillis < until) return PinVerify.Locked((until - nowMillis + 999) / 1000)
+        val count = prefs.getInt(KEY_RQ_COUNT, 0)
+        if (count == 0 || answers.size != count) return PinVerify.Wrong
+        val ok = withContext(Dispatchers.Default) {
+            // Every answer is always checked, so the time taken does not reveal which one was wrong.
+            (0 until count).map { i ->
+                val salt = prefs.getString("rq_s_$i", null)?.let { Base64.getDecoder().decode(it) }
+                val expected = prefs.getString("rq_h_$i", null)?.let { Base64.getDecoder().decode(it) }
+                salt != null && expected != null &&
+                    PinPolicy.matches(RecoveryPolicy.normalize(answers[i]), salt, expected)
+            }.all { it }
+        }
+        if (ok) {
+            prefs.edit().putInt(KEY_RQ_FAILS, 0).putLong(KEY_RQ_UNTIL, 0L).commit()
+            return PinVerify.Ok
+        }
+        val fails = prefs.getInt(KEY_RQ_FAILS, 0) + 1
+        val wait = RecoveryPolicy.lockoutSeconds(fails)
+        prefs.edit().putInt(KEY_RQ_FAILS, fails).putLong(KEY_RQ_UNTIL, if (wait > 0) nowMillis + wait * 1000 else 0L).commit()
+        return if (wait > 0) PinVerify.Locked(wait) else PinVerify.Wrong
+    }
+
+    /** Sets a new PIN after a successful recovery. */
+    suspend fun changePin(pin: String, confirm: String): PinChange {
+        when (PinPolicy.check(pin)) {
+            PinPolicy.Problem.FORMAT -> return PinChange.FORMAT
+            PinPolicy.Problem.WEAK -> return PinChange.WEAK
+            null -> Unit
+        }
+        if (pin != confirm) return PinChange.MISMATCH
+        setPin(pin)
+        return PinChange.OK
+    }
+
     private companion object {
         const val KEY_SALT = "salt"
         const val KEY_HASH = "hash"
@@ -77,5 +137,8 @@ class AppLockStore @Inject constructor(
         const val KEY_UNTIL = "until"
         const val KEY_AUTOLOCK = "autolock"
         const val KEY_BIOMETRIC = "biometric"
+        const val KEY_RQ_COUNT = "rq_count"
+        const val KEY_RQ_FAILS = "rq_fails"
+        const val KEY_RQ_UNTIL = "rq_until"
     }
 }

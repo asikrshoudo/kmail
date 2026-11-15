@@ -9,6 +9,7 @@ import com.kmail.thekami.data.security.AppLockManager
 import com.kmail.thekami.data.security.AppLockStore
 import com.kmail.thekami.data.security.PinPolicy
 import com.kmail.thekami.data.security.PinVerify
+import com.kmail.thekami.data.security.RecoveryPolicy
 import com.kmail.thekami.domain.model.Account
 import com.kmail.thekami.sync.SyncPrefs
 import com.kmail.thekami.sync.SyncScheduler
@@ -34,6 +35,7 @@ data class LockUi(
     val biometric: Boolean,
     val biometricAvailable: Boolean,
     val autoLockSeconds: Int,
+    val hasRecovery: Boolean,
 )
 
 @HiltViewModel
@@ -68,6 +70,7 @@ class SettingsViewModel @Inject constructor(
         biometric = store.biometricEnabled,
         biometricAvailable = Biometric.isAvailable(context),
         autoLockSeconds = store.autoLockSeconds,
+        hasRecovery = store.hasRecovery,
     )
 
     // ---- appearance ----
@@ -123,6 +126,12 @@ class SettingsViewModel @Inject constructor(
     fun setAutoLock(seconds: Int) {
         store.setAutoLockSeconds(seconds)
         _lock.value = readLock()
+    }
+
+    suspend fun setRecovery(q1: String, a1: String, q2: String, a2: String): RecoveryPolicy.Problem? {
+        val problem = store.setRecovery(listOf(q1, q2), listOf(a1, a2))
+        if (problem == null) _lock.value = readLock()
+        return problem
     }
 
     /** With App Lock on, the PIN must be right before anything is deleted. */

@@ -159,6 +159,18 @@ Known issues (suggestions):
 - Sent addresses are remembered only for messages sent from this app version on.
 - Play Console: READ_CONTACTS is used on the device only and nothing is uploaded; answer the Data safety form accordingly.
 
+Step 9.2 on a device: build installed. Suggestions were not checked in detail.
+
+Step 10.1 (App Lock recovery questions): added, verify in CI and on a device.
+
+Known issues (recovery):
+- Exactly two questions. Answers are compared after lower-casing, trimming and Unicode normalization.
+- Questions are stored in plain text on the device so they can be shown on the lock screen. Answers are only stored as PBKDF2 hashes (120000 iterations, own salt each).
+- Lockout for wrong answers starts at 3 failures (1 minute, doubling, at most 6 hours) and uses the device clock.
+- The answer hashes are not bound to the Android Keystore yet.
+- The recovery questions are asked for right after the PIN is set; they can be skipped and set up later in Settings.
+- Recovery logic (store) is covered by policy unit tests only. The store itself has no unit tests.
+
 ## Next
 
-Security-question recovery for App Lock, translations, final release checks.
+Translations for the other seven languages, then final release checks.

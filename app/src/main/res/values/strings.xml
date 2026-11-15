@@ -170,7 +170,7 @@
     <string name="settings_privacy">Privacy &amp; Security</string>
     <string name="settings_app_lock">App Lock</string>
     <string name="settings_app_lock_desc">Ask for a PIN when Kmail opens.</string>
-    <string name="settings_lock_note">If you forget the PIN, clear the app data or reinstall Kmail. Your mailbox on the server is not affected.</string>
+    <string name="settings_lock_note">If you forget the PIN, answer your recovery questions on the lock screen. Without them, you must clear the app data or reinstall Kmail. Your mailbox on the server is not affected.</string>
     <string name="settings_biometric">Unlock with fingerprint or face</string>
     <string name="settings_auto_lock">Lock after leaving the app</string>
     <string name="settings_auto_lock_immediate">Immediately</string>
@@ -248,4 +248,29 @@
     <string name="settings_signature_uses_default">Uses the default signature</string>
     <string name="settings_signature_edit">Edit</string>
     <string name="settings_signature_hint">Leave empty to use the default signature.</string>
+
+    <string name="settings_recovery">Recovery questions</string>
+    <string name="settings_recovery_on">Set. They can reset your PIN.</string>
+    <string name="settings_recovery_off">Not set. If you forget your PIN, you will have to clear the app data.</string>
+    <string name="settings_recovery_setup">Set up</string>
+    <string name="settings_recovery_change">Change</string>
+    <string name="recovery_setup_title">Recovery questions</string>
+    <string name="recovery_setup_hint">Write two questions that only you can answer. Your answers are not stored, only a protected fingerprint of them. If you forget the answers, they cannot be recovered.</string>
+    <string name="recovery_question_1">Question 1</string>
+    <string name="recovery_answer_1">Answer 1</string>
+    <string name="recovery_question_2">Question 2</string>
+    <string name="recovery_answer_2">Answer 2</string>
+    <string name="recovery_skip">Skip for now</string>
+    <string name="recovery_err_question_short">Questions need at least 8 characters.</string>
+    <string name="recovery_err_answer_short">Answers need at least 4 characters.</string>
+    <string name="recovery_err_answer_common">That answer is too easy to guess.</string>
+    <string name="recovery_err_same">An answer must not repeat its question.</string>
+    <string name="recovery_err_dup_questions">Use two different questions.</string>
+    <string name="recovery_err_dup_answers">Use two different answers.</string>
+    <string name="lock_forgot">Forgot PIN?</string>
+    <string name="recovery_title">Reset your PIN</string>
+    <string name="recovery_answer_hint">Answer your questions as you wrote them. Capital letters and extra spaces don’t matter.</string>
+    <string name="recovery_continue">Continue</string>
+    <string name="recovery_wrong">One or more answers are wrong.</string>
+    <string name="recovery_new_pin_title">Choose a new PIN</string>
 </resources>
