@@ -88,7 +88,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -97,7 +96,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.input.nestedscroll.rememberNestedScrollInteropConnection
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
@@ -691,7 +689,7 @@ private fun EmailWebView(
 ) {
     val currentOnLink by rememberUpdatedState(onLink)
     AndroidView(
-        modifier = modifier.nestedScroll(rememberNestedScrollInteropConnection()),
+        modifier = modifier,
         factory = { context ->
             WebView(context).apply {
                 settings.javaScriptEnabled = false
