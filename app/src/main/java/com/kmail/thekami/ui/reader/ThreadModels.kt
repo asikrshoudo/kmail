@@ -36,8 +36,8 @@ object ThreadBuilder {
         val same = if (core.isEmpty()) emptyList() else candidates.filter { ThreadSubject.normalize(it.subject) == core }
         var all = (same + opened).distinctBy { it.id }.sortedBy { it.receivedAtMillis }
         if (all.size > MAX) {
-            all = all.takeLast(MAX)
-            if (all.none { it.id == opened.id }) all = (all + opened).sortedBy { it.receivedAtMillis }
+            val others = all.filter { it.id != opened.id }.takeLast(MAX - 1)
+            all = (others + opened).sortedBy { it.receivedAtMillis }
         }
         return all.map {
             ThreadItem(
