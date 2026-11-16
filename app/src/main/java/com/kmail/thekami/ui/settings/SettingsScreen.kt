@@ -2,35 +2,41 @@ package com.kmail.thekami.ui.settings
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.StringRes
-import com.kmail.thekami.ui.theme.ThemeMode
-import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,18 +56,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
 import com.kmail.thekami.data.security.PinVerify
 import com.kmail.thekami.domain.model.Account
+import com.kmail.thekami.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
 private sealed interface SettingsDialog {
@@ -119,142 +129,175 @@ fun SettingsScreen(
         },
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            SettingsCard(R.string.settings_accounts, Icons.Rounded.AccountCircle) {
-            accounts.orEmpty().forEach { account ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(account.emailAddress, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { dialogError = null; dialog = SettingsDialog.Remove(account) }) {
-                        Text(stringResource(R.string.settings_remove_account), color = MaterialTheme.colorScheme.error)
-                    }
+            // ---- Accounts ----
+            SettingsSection(R.string.settings_accounts, Icons.Rounded.AccountCircle) {
+                accounts.orEmpty().forEach { account ->
+                    AccountRow(account) { dialogError = null; dialog = SettingsDialog.Remove(account) }
                 }
-            }
-            TextButton(onClick = onAddAccount) { Text(stringResource(R.string.home_add_account)) }
-            }
-
-            SignatureSection(accounts.orEmpty())
-
-            SettingsCard(R.string.settings_appearance, Icons.Rounded.Palette) {
-            Text(stringResource(R.string.appearance_theme), style = MaterialTheme.typography.bodyLarge)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    ThemeMode.System to R.string.appearance_system,
-                    ThemeMode.Light to R.string.appearance_light,
-                    ThemeMode.Dark to R.string.appearance_dark,
-                ).forEach { (mode, label) ->
-                    FilterChip(
-                        selected = appearance.mode == mode,
-                        onClick = { vm.setThemeMode(mode) },
-                        label = { Text(stringResource(label)) },
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onAddAccount)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(Icons.Rounded.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text(
+                        stringResource(R.string.home_add_account),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
-            SwitchRow(R.string.appearance_amoled, R.string.appearance_amoled_desc, appearance.amoled, vm::setAmoled)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                SwitchRow(R.string.appearance_dynamic, R.string.appearance_dynamic_desc, appearance.dynamicColor, vm::setDynamicColor)
-            }
+
+            // ---- Compose & Signature (own section, unchanged) ----
+            SignatureSection(accounts.orEmpty())
+
+            // ---- Appearance ----
+            SettingsSection(R.string.settings_appearance, Icons.Rounded.Palette) {
+                ChipGroup(R.string.appearance_theme) {
+                    ChipRow(
+                        options = listOf(
+                            ThemeMode.System to stringResource(R.string.appearance_system),
+                            ThemeMode.Light to stringResource(R.string.appearance_light),
+                            ThemeMode.Dark to stringResource(R.string.appearance_dark),
+                        ),
+                        selected = appearance.mode,
+                        onSelect = vm::setThemeMode,
+                        equalWidth = true,
+                    )
+                }
+                SwitchRow(
+                    R.string.appearance_amoled,
+                    R.string.appearance_amoled_desc,
+                    appearance.amoled,
+                    vm::setAmoled,
+                    enabled = appearance.mode != ThemeMode.Light,
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    SwitchRow(
+                        R.string.appearance_dynamic,
+                        R.string.appearance_dynamic_desc,
+                        appearance.dynamicColor,
+                        vm::setDynamicColor,
+                    )
+                }
             }
 
-            SettingsCard(R.string.settings_sync, Icons.Rounded.Sync) {
-            SwitchRow(R.string.settings_bg_sync, R.string.settings_bg_sync_desc, sync.backgroundSync, vm::setBackgroundSync)
-            if (sync.backgroundSync) {
-                Text(stringResource(R.string.settings_interval), style = MaterialTheme.typography.bodyLarge)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5, 10, 15, 30, 60).forEach { minutes ->
-                        FilterChip(
-                            selected = sync.intervalMinutes == minutes,
-                            onClick = { vm.setInterval(minutes) },
-                            label = { Text(stringResource(R.string.settings_interval_minutes, minutes)) },
+            // ---- Sync & Notifications ----
+            SettingsSection(R.string.settings_sync, Icons.Rounded.Sync) {
+                SwitchRow(R.string.settings_bg_sync, R.string.settings_bg_sync_desc, sync.backgroundSync, vm::setBackgroundSync)
+                if (sync.backgroundSync) {
+                    ChipGroup(R.string.settings_interval) {
+                        ChipRow(
+                            options = listOf(5, 10, 15, 30, 60).map {
+                                it to stringResource(R.string.settings_interval_minutes, it)
+                            },
+                            selected = sync.intervalMinutes,
+                            onSelect = vm::setInterval,
+                            equalWidth = true,
                         )
                     }
                 }
-            }
-            SwitchRow(R.string.settings_notifications, null, sync.notifications, vm::setNotifications)
-            if (sync.notifications) {
-                SwitchRow(R.string.settings_hide_content, null, sync.hideContent, vm::setHideContent)
-            }
+                SwitchRow(R.string.settings_notifications, null, sync.notifications, vm::setNotifications)
+                SwitchRow(
+                    R.string.settings_hide_content,
+                    null,
+                    sync.hideContent,
+                    vm::setHideContent,
+                    enabled = sync.notifications,
+                )
             }
 
-            SettingsCard(R.string.settings_privacy, Icons.Rounded.Lock) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_app_lock), style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        stringResource(R.string.settings_app_lock_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = lock.enabled,
-                    onCheckedChange = { on ->
+            // ---- Privacy & Security ----
+            SettingsSection(R.string.settings_privacy, Icons.Rounded.Lock) {
+                SwitchRow(
+                    R.string.settings_app_lock,
+                    R.string.settings_app_lock_desc,
+                    lock.enabled,
+                    { on ->
                         dialogError = null
                         dialog = if (on) SettingsDialog.SetPin else SettingsDialog.DisableLock
                     },
                 )
-            }
-            if (lock.enabled) {
-                if (lock.biometricAvailable) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.settings_biometric), modifier = Modifier.weight(1f))
-                        Switch(checked = lock.biometric, onCheckedChange = vm::setBiometric)
+                if (lock.enabled) {
+                    if (lock.biometricAvailable) {
+                        SwitchRow(R.string.settings_biometric, null, lock.biometric, vm::setBiometric)
                     }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.settings_recovery), style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            stringResource(if (lock.hasRecovery) R.string.settings_recovery_on else R.string.settings_recovery_off),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    TextButton(onClick = { dialogError = null; dialog = SettingsDialog.Recovery }) {
-                        Text(stringResource(if (lock.hasRecovery) R.string.settings_recovery_change else R.string.settings_recovery_setup))
-                    }
-                }
-                Text(stringResource(R.string.settings_auto_lock), style = MaterialTheme.typography.bodyLarge)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0, 60, 300, 900).forEach { seconds ->
-                        FilterChip(
-                            selected = lock.autoLockSeconds == seconds,
-                            onClick = { vm.setAutoLock(seconds) },
-                            label = {
-                                Text(
-                                    if (seconds == 0) stringResource(R.string.settings_auto_lock_immediate)
-                                    else stringResource(R.string.settings_auto_lock_minutes, seconds / 60),
-                                )
+                    ActionRow(
+                        title = stringResource(R.string.settings_recovery),
+                        subtitle = stringResource(
+                            if (lock.hasRecovery) R.string.settings_recovery_on else R.string.settings_recovery_off,
+                        ),
+                        action = stringResource(
+                            if (lock.hasRecovery) R.string.settings_recovery_change else R.string.settings_recovery_setup,
+                        ),
+                        onAction = { dialogError = null; dialog = SettingsDialog.Recovery },
+                    )
+                    ChipGroup(R.string.settings_auto_lock) {
+                        ChipRow(
+                            options = listOf(0, 60, 300, 900).map { seconds ->
+                                seconds to if (seconds == 0) {
+                                    stringResource(R.string.settings_auto_lock_immediate)
+                                } else {
+                                    stringResource(R.string.settings_auto_lock_minutes, seconds / 60)
+                                }
                             },
+                            selected = lock.autoLockSeconds,
+                            onSelect = vm::setAutoLock,
                         )
                     }
+                    Text(
+                        stringResource(R.string.settings_lock_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                 }
-                Text(
-                    stringResource(R.string.settings_lock_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             }
 
-            SettingsCard(R.string.settings_about, Icons.Rounded.Info) {
-            TextButton(
-                onClick = {
-                    try {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.settings_privacy_url))),
-                        )
-                    } catch (e: ActivityNotFoundException) {
-                        // no browser installed
-                    }
-                },
-            ) { Text(stringResource(R.string.settings_privacy_policy)) }
-
+            // ---- About ----
+            SettingsSection(R.string.settings_about, Icons.Rounded.Info) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            try {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.settings_privacy_url))),
+                                )
+                            } catch (e: ActivityNotFoundException) {
+                                // no browser installed
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.settings_privacy_policy),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Rounded.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
-            // Only the brand and the version, centered, at the very bottom.
-            Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(stringResource(R.string.settings_brand), style = MaterialTheme.typography.titleMedium)
                 Text(
                     stringResource(R.string.settings_version, vm.versionName),
@@ -328,7 +371,9 @@ fun SettingsScreen(
                                 vm.removeAccount(d.account.id, null)
                                 dialog = null
                             }
-                        }) { Text(stringResource(R.string.settings_remove_confirm), color = MaterialTheme.colorScheme.error) }
+                        }) {
+                            Text(stringResource(R.string.settings_remove_confirm), color = MaterialTheme.colorScheme.error)
+                        }
                     },
                     dismissButton = {
                         TextButton(onClick = { dialog = null }) { Text(stringResource(R.string.compose_discard_keep)) }
@@ -344,14 +389,161 @@ fun SettingsScreen(
     }
 }
 
+/** A titled group of settings: icon + title above, rows inside a rounded card. */
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 16.dp),
-    )
+private fun SettingsSection(
+    @StringRes title: Int,
+    icon: ImageVector,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Text(
+                stringResource(title),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            ),
+        ) {
+            Column(Modifier.padding(vertical = 6.dp), content = content)
+        }
+    }
+}
+
+@Composable
+private fun AccountRow(account: Account, onRemove: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                account.emailAddress.take(1).uppercase(),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Text(
+            account.emailAddress,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onRemove) {
+            Text(stringResource(R.string.settings_remove_account), color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun SwitchRow(
+    @StringRes title: Int,
+    @StringRes description: Int?,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+) {
+    val textAlpha = if (enabled) 1f else 0.38f
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 16.dp)) {
+            Text(
+                stringResource(title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = textAlpha),
+            )
+            if (description != null) {
+                Text(
+                    stringResource(description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = textAlpha),
+                )
+            }
+        }
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+    }
+}
+
+@Composable
+private fun ActionRow(title: String, subtitle: String?, action: String, onAction: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        TextButton(onClick = onAction) { Text(action) }
+    }
+}
+
+@Composable
+private fun ChipGroup(@StringRes title: Int, content: @Composable () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
+        content()
+    }
+}
+
+@Composable
+private fun <T> ChipRow(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    equalWidth: Boolean = false,
+) {
+    val scroll = rememberScrollState()
+    Row(
+        Modifier.fillMaxWidth().then(if (equalWidth) Modifier else Modifier.horizontalScroll(scroll)),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { (value, label) ->
+            FilterChip(
+                selected = value == selected,
+                onClick = { onSelect(value) },
+                label = {
+                    Text(
+                        label,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center,
+                        modifier = if (equalWidth) Modifier.fillMaxWidth() else Modifier,
+                    )
+                },
+                modifier = if (equalWidth) Modifier.weight(1f) else Modifier,
+            )
+        }
+    }
 }
 
 @Composable
@@ -391,49 +583,4 @@ private fun PinDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.compose_discard_keep)) } },
     )
-}
-
-@Composable
-private fun SwitchRow(
-    @StringRes title: Int,
-    @StringRes description: Int?,
-    checked: Boolean,
-    onChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
-            if (description != null) {
-                Text(
-                    stringResource(description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
-}
-
-@Composable
-private fun SettingsCard(
-    @StringRes title: Int,
-    icon: ImageVector,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-        ),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Text(stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            content()
-        }
-    }
 }
