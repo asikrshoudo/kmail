@@ -85,6 +85,7 @@ internal class FakeMessageDao : MessageDao {
     override fun observeStarred(limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeUnreadInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeUnreadCounts() = flowOf(emptyList<FolderUnread>())
+    override suspend fun threadCandidates(accountId: String, core: String): List<MessageEntity> = emptyList()
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
     override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
     override suspend fun suggestSenders(q: String, limit: Int): List<AddressSuggestion> = emptyList()
@@ -232,8 +233,8 @@ class SyncRepositoryTest {
         assertNull(repo.syncAccount("a"))
         assertNull(repo.syncAccount("a"))
         assertEquals(2, folders.rows.size)
-        assertEquals(1, messages.rows.size)
-        assertEquals(listOf<Long?>(null, 1L), provider.fetchCalls)
+        assertEquals(2, messages.rows.size)
+        assertEquals(listOf<Long?>(null, null, 1L, 1L), provider.fetchCalls)
     }
 
     @Test

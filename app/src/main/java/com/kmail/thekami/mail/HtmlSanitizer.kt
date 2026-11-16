@@ -30,8 +30,15 @@ object HtmlSanitizer {
         .addProtocols("img", "src", "cid", "data")
         .addEnforcedAttribute("a", "rel", "noopener noreferrer")
 
-    private const val BASE_CSS =
-        "body{margin:0;padding:12px 16px 96px;overflow-wrap:anywhere;word-wrap:break-word;color:#202124;background:#fff}" +
+
+    /**
+     * In the dark view the page is inverted, so the base text is black (it becomes white) and the
+     * page background is transparent: the card behind the email shows through.
+     */
+    private fun baseCss(dark: Boolean): String =
+        "body{margin:0;padding:12px 16px 16px;overflow-wrap:anywhere;word-wrap:break-word;" +
+            "font-family:system-ui,Roboto,sans-serif;font-size:16px;line-height:1.5;" +
+            (if (dark) "color:#000;background:transparent}" else "color:#202124;background:#fff}") +
             "img{max-width:100% !important;height:auto}table{max-width:100%}" +
             "blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #c4c7c5;color:#5f6368}" +
             "details.kmail-quote{margin:8px 0}" +
@@ -111,7 +118,7 @@ object HtmlSanitizer {
             "; style-src 'unsafe-inline'"
         doc.head().prepend("<meta http-equiv=\"Content-Security-Policy\" content=\"$csp\">")
         doc.head().prepend("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
-        doc.head().append("<style>$BASE_CSS${if (darkView) DARK_CSS else ""}</style>")
+        doc.head().append("<style>${baseCss(darkView)}${if (darkView) DARK_CSS else ""}</style>")
         return SanitizedHtml(doc.outerHtml(), blocked)
     }
 

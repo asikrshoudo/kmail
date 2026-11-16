@@ -112,4 +112,12 @@ interface MessageDao {
             "WHERE isRead = 0 AND removedAtMillis IS NULL GROUP BY folderId",
     )
     fun observeUnreadCounts(): Flow<List<FolderUnread>>
+
+    @Query(
+        "SELECT m.* FROM messages m JOIN folders f ON f.id = m.folderId " +
+            "WHERE m.accountId = :accountId AND instr(lower(m.subject), :core) > 0 " +
+            "AND m.uidValidity = f.uidValidity AND m.removedAtMillis IS NULL " +
+            "AND f.role NOT IN ('TRASH', 'SPAM', 'DRAFTS') ORDER BY m.receivedAtMillis ASC LIMIT 80",
+    )
+    suspend fun threadCandidates(accountId: String, core: String): List<MessageEntity>
 }

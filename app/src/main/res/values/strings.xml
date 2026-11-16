@@ -301,4 +301,15 @@
     <string name="reader_dark_view">Dark view</string>
     <string name="reader_original_colors">Original colors</string>
     <string name="reader_save_attachment">Save %1$s</string>
+
+    <string name="reader_show_pictures">Show pictures</string>
+    <string name="reader_unsubscribe">Unsubscribe</string>
+    <string name="reader_to_line">To: %1$s</string>
+    <string name="reader_me">me</string>
+    <string name="reader_me_cap">Me</string>
+    <string name="reader_body_failed">Couldn’t load this message.</string>
+    <plurals name="reader_thread_count">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
 </resources>

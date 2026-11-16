@@ -42,6 +42,7 @@ data class ParsedMessage(
     val textBody: String?,
     val inlineImages: Map<String, InlineImage>,
     val attachments: List<ParsedAttachment>,
+    val unsubscribe: String? = null,
 ) {
     /** Short single-line preview for the message list. */
     fun previewText(): String {
@@ -86,6 +87,7 @@ object MimeParser {
             textBody = collector.text,
             inlineImages = collector.inline,
             attachments = collector.attachments,
+            unsubscribe = ListUnsubscribe.pick(runCatching { message.getHeader("List-Unsubscribe", null) }.getOrNull()),
         )
     }
 
@@ -147,5 +149,17 @@ object MimeParser {
         "image/jpeg" -> "image.jpg"
         "text/plain" -> "text.txt"
         else -> "attachment"
+    }
+}
+
+/** Picks the address from a List-Unsubscribe header. Only web and mailto links are accepted. */
+object ListUnsubscribe {
+    private val ANGLE = Regex("<([^>]+)>")
+
+    fun pick(header: String?): String? {
+        val links = ANGLE.findAll(header.orEmpty()).map { it.groupValues[1].trim() }.toList()
+        return links.firstOrNull { it.startsWith("https://", ignoreCase = true) }
+            ?: links.firstOrNull { it.startsWith("http://", ignoreCase = true) }
+            ?: links.firstOrNull { it.startsWith("mailto:", ignoreCase = true) }
     }
 }

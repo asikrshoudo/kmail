@@ -37,7 +37,7 @@ class SyncRepository @Inject constructor(
     private val folderLocks = ConcurrentHashMap<Long, Mutex>()
 
     /** Updates the folder list, then syncs the inbox. */
-    suspend fun syncAccount(accountId: String, reconcile: Boolean = true): MailError? =
+    suspend fun syncAccount(accountId: String, reconcile: Boolean = true, includeSent: Boolean = reconcile): MailError? =
         accountLocks.getOrPut(accountId) { Mutex() }.withLock {
             val provider = providers.forAccount(accountId) ?: return@withLock null
             val remote = when (val result = provider.listFolders()) {
@@ -60,7 +60,10 @@ class SyncRepository @Inject constructor(
                 }
             }
             val inbox = folderDao.listByAccount(accountId).firstOrNull { it.role == FolderRole.INBOX }
-            if (inbox == null) null else syncFolder(inbox.id, reconcile)
+            val inboxError = inbox?.let { syncFolder(it.id, reconcile) }
+            val sent = if (includeSent) folderDao.listByAccount(accountId).firstOrNull { it.role == FolderRole.SENT } else null
+            val sentError = sent?.let { syncFolder(it.id, reconcile = false) }
+            inboxError ?: sentError
         }
 
     suspend fun syncFolder(folderId: Long, reconcile: Boolean = true): MailError? =

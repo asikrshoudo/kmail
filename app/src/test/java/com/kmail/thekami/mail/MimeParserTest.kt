@@ -119,4 +119,18 @@ class MimeParserTest {
         assertNull(m.from)
         assertEquals("x", m.subject)
     }
+
+    @Test
+    fun listUnsubscribePrefersHttpsAndRejectsOtherSchemes() {
+        assertEquals("https://a.com/u?x=1", ListUnsubscribe.pick("<mailto:u@a.com>, <https://a.com/u?x=1>"))
+        assertEquals("mailto:u@a.com", ListUnsubscribe.pick("<mailto:u@a.com>"))
+        assertNull(ListUnsubscribe.pick("<javascript:alert(1)>, <ftp://x>"))
+        assertNull(ListUnsubscribe.pick(null))
+    }
+
+    @Test
+    fun listUnsubscribeHeaderIsParsedFromAMessage() {
+        val m = parse("From: a@x.com\nList-Unsubscribe: <https://a.com/stop>\nContent-Type: text/plain\n\nhi\n")
+        assertEquals("https://a.com/stop", m.unsubscribe)
+    }
 }

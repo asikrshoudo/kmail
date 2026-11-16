@@ -8,12 +8,12 @@ import androidx.lifecycle.viewModelScope
 import com.kmail.thekami.data.db.FolderDao
 import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.data.db.MessageDao
+import com.kmail.thekami.data.repo.AccountRepository
 import com.kmail.thekami.data.repo.BodyStore
 import com.kmail.thekami.data.repo.MessageActionResult
 import com.kmail.thekami.data.repo.MessageActionsRepository
 import com.kmail.thekami.data.repo.MessageBodyCache
 import com.kmail.thekami.domain.mail.MailError
-import com.kmail.thekami.domain.mail.MailProvider
 import com.kmail.thekami.domain.mail.MailResult
 import com.kmail.thekami.domain.mail.ProviderSource
 import com.kmail.thekami.domain.model.FolderRole
@@ -35,14 +35,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class LoadedBody(
+    val message: ParsedMessage,
+    val html: String,
+    val blockedRemote: Int,
+    val allowRemote: Boolean,
+)
+
 data class ReaderUiState(
     val loading: Boolean = true,
     val missing: Boolean = false,
+    /** Error of the opened message only. Other thread messages report through [failedBodies]. */
     val error: MailError? = null,
-    val message: ParsedMessage? = null,
-    val html: String = "",
-    val blockedRemote: Int = 0,
-    val allowRemote: Boolean = false,
+    val subject: String = "",
+    val thread: List<ThreadItem> = emptyList(),
+    val openedId: Long = -1,
+    val openedFolder: FolderEntity? = null,
+    val expanded: Set<Long> = emptySet(),
+    val bodies: Map<Long, LoadedBody> = emptyMap(),
+    val loadingBodies: Set<Long> = emptySet(),
+    val failedBodies: Map<Long, MailError> = emptyMap(),
+    val ownEmail: String = "",
     val darkView: Boolean = false,
     val starred: Boolean = false,
     /** Set after archive, delete or move succeeded: the screen should close. */
@@ -50,6 +63,11 @@ data class ReaderUiState(
     val notice: MessageActionResult? = null,
     val folders: List<FolderEntity> = emptyList(),
 )
+
+private sealed interface BodyLoad {
+    data object Ok : BodyLoad
+    data class Failed(val error: MailError) : BodyLoad
+}
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -62,16 +80,17 @@ class ReaderViewModel @Inject constructor(
     private val bodies: BodyStore,
     private val actions: MessageActionsRepository,
     private val appearanceStore: AppearanceStore,
+    private val accountRepository: AccountRepository,
 ) : ViewModel() {
 
     val messageId: Long = savedStateHandle["messageId"] ?: -1L
 
     /** Starts dark when the app is dark, so the email does not flash white first. */
     private var darkView = isDarkNow()
+    private val parsed = mutableMapOf<Long, ParsedMessage>()
 
     private val _state = MutableStateFlow(ReaderUiState(darkView = darkView))
     val state: StateFlow<ReaderUiState> = _state.asStateFlow()
-    private var parsed: ParsedMessage? = null
 
     init {
         load()
@@ -86,54 +105,120 @@ class ReaderViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
+            parsed.clear()
             _state.value = ReaderUiState(darkView = darkView)
             val entity = messageDao.getById(messageId)
             val folder = entity?.let { folderDao.getById(it.folderId) }
-            val provider = entity?.let { providers.forAccount(it.accountId) }
-            if (entity == null || folder == null || provider == null) {
+            if (entity == null || folder == null) {
                 _state.update { it.copy(loading = false, missing = true) }
                 return@launch
             }
+            val own = accountRepository.getAccount(entity.accountId)?.emailAddress.orEmpty()
+            val candidates = ThreadSubject.normalize(entity.subject).takeIf { it.isNotEmpty() }
+                ?.let { messageDao.threadCandidates(entity.accountId, it) }.orEmpty()
             _state.update {
-                it.copy(starred = entity.isStarred, folders = folderDao.listByAccount(entity.accountId))
+                it.copy(
+                    subject = entity.subject,
+                    thread = ThreadBuilder.build(entity, candidates, own),
+                    openedId = entity.id,
+                    openedFolder = folder,
+                    expanded = setOf(entity.id),
+                    loadingBodies = setOf(entity.id),
+                    starred = entity.isStarred,
+                    ownEmail = own,
+                    folders = folderDao.listByAccount(entity.accountId),
+                )
             }
-            val remote = RemoteFolder(folder.remoteName, folder.displayName, folder.role)
-            val raw = cache.get(entity.id) ?: bodies.get(entity.id)?.also { cache.put(entity.id, it) }
-                ?: when (val r = provider.fetchRawMessage(remote, entity.uidValidity, entity.uid)) {
-                    is MailResult.Failure -> {
-                        _state.update { it.copy(loading = false, error = r.error) }
-                        return@launch
-                    }
-                    is MailResult.Success -> r.value.also {
-                        cache.put(entity.id, it)
-                        bodies.put(entity.id, it)
-                    }
+            when (val r = loadBody(entity.id)) {
+                is BodyLoad.Failed -> {
+                    _state.update { it.copy(loading = false, error = r.error, loadingBodies = it.loadingBodies - entity.id) }
+                    return@launch
                 }
-            val message = try {
-                withContext(Dispatchers.Default) { MimeParser.parse(raw) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _state.update { it.copy(loading = false, error = MailError.Unknown("parse_failed")) }
-                return@launch
+                BodyLoad.Ok -> _state.update { it.copy(loading = false) }
             }
-            parsed = message
-            render(message, allowRemote = false)
-
-            if (entity.snippet.isBlank()) messageDao.updateSnippet(entity.id, message.previewText())
-            if (!entity.isRead) markRead(provider, remote, entity.id, entity.uidValidity, entity.uid, entity.isStarred)
+            parsed[entity.id]?.let { message ->
+                if (entity.snippet.isBlank()) messageDao.updateSnippet(entity.id, message.previewText())
+            }
+            if (!entity.isRead) actions.setRead(listOf(entity.id), true)
         }
     }
 
-    fun setAllowRemote(allow: Boolean) {
-        val message = parsed ?: return
-        viewModelScope.launch { render(message, allow) }
+    private suspend fun loadBody(id: Long): BodyLoad {
+        val entity = messageDao.getById(id) ?: return BodyLoad.Failed(MailError.Unknown("missing"))
+        val folder = folderDao.getById(entity.folderId) ?: return BodyLoad.Failed(MailError.Unknown("missing"))
+        val provider = providers.forAccount(entity.accountId) ?: return BodyLoad.Failed(MailError.Unknown("missing"))
+        val remote = RemoteFolder(folder.remoteName, folder.displayName, folder.role)
+        val raw = cache.get(id) ?: bodies.get(id)?.also { cache.put(id, it) }
+            ?: when (val r = provider.fetchRawMessage(remote, entity.uidValidity, entity.uid)) {
+                is MailResult.Failure -> return BodyLoad.Failed(r.error)
+                is MailResult.Success -> r.value.also {
+                    cache.put(id, it)
+                    bodies.put(id, it)
+                }
+            }
+        val message = try {
+            withContext(Dispatchers.Default) { MimeParser.parse(raw) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return BodyLoad.Failed(MailError.Unknown("parse_failed"))
+        }
+        parsed[id] = message
+        renderBody(id, message, allowRemote = false)
+        return BodyLoad.Ok
+    }
+
+    private suspend fun renderBody(id: Long, message: ParsedMessage, allowRemote: Boolean) {
+        val dark = darkView
+        val sanitized = withContext(Dispatchers.Default) { HtmlSanitizer.render(message, allowRemote, dark) }
+        _state.update {
+            it.copy(
+                bodies = it.bodies + (id to LoadedBody(message, sanitized.html, sanitized.blockedRemoteCount, allowRemote)),
+                loadingBodies = it.loadingBodies - id,
+                failedBodies = it.failedBodies - id,
+                darkView = dark,
+            )
+        }
+    }
+
+    /** Opens or closes a message of the thread. Opening loads its body and marks it read. */
+    fun toggle(id: Long) {
+        val s = _state.value
+        if (id in s.expanded) {
+            _state.update { it.copy(expanded = it.expanded - id) }
+            return
+        }
+        _state.update { it.copy(expanded = it.expanded + id) }
+        if (id !in s.bodies) retryBody(id)
+    }
+
+    fun retryBody(id: Long) {
+        _state.update { it.copy(loadingBodies = it.loadingBodies + id, failedBodies = it.failedBodies - id) }
+        viewModelScope.launch {
+            when (val r = loadBody(id)) {
+                is BodyLoad.Failed -> _state.update {
+                    it.copy(loadingBodies = it.loadingBodies - id, failedBodies = it.failedBodies + (id to r.error))
+                }
+                BodyLoad.Ok -> if (_state.value.thread.firstOrNull { it.id == id }?.isRead == false) {
+                    actions.setRead(listOf(id), true)
+                }
+            }
+        }
+    }
+
+    fun setAllowRemote(id: Long, allow: Boolean) {
+        val message = parsed[id] ?: return
+        viewModelScope.launch { renderBody(id, message, allow) }
     }
 
     fun setDarkView(on: Boolean) {
         darkView = on
-        val message = parsed ?: return
-        viewModelScope.launch { render(message, _state.value.allowRemote) }
+        viewModelScope.launch {
+            parsed.forEach { (id, message) ->
+                renderBody(id, message, _state.value.bodies[id]?.allowRemote ?: false)
+            }
+            _state.update { it.copy(darkView = on) }
+        }
     }
 
     fun toggleStar() {
@@ -174,30 +259,5 @@ class ReaderViewModel @Inject constructor(
                 else -> _state.update { it.copy(notice = r) }
             }
         }
-    }
-
-    private suspend fun render(message: ParsedMessage, allowRemote: Boolean) {
-        val dark = darkView
-        val sanitized = withContext(Dispatchers.Default) { HtmlSanitizer.render(message, allowRemote, dark) }
-        _state.update {
-            it.copy(
-                loading = false, missing = false, error = null, message = message,
-                html = sanitized.html, blockedRemote = sanitized.blockedRemoteCount,
-                allowRemote = allowRemote, darkView = dark,
-            )
-        }
-    }
-
-    private suspend fun markRead(
-        provider: MailProvider,
-        folder: RemoteFolder,
-        id: Long,
-        uidValidity: Long,
-        uid: Long,
-        starred: Boolean,
-    ) {
-        // The local flag changes only after the server accepted it.
-        val result = provider.updateFlags(folder, uidValidity, listOf(uid), isRead = true, isStarred = null)
-        if (result is MailResult.Success) messageDao.updateFlags(id, true, starred)
     }
 }

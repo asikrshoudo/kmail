@@ -203,6 +203,18 @@ Known issues (reader):
 - The header is not part of the scrolling page. Long subjects are cut after three lines.
 - Next and previous message by swiping is not built.
 
+Step 12.3 on a device: judged not close enough to Gmail and Proton Mail by the user (pale text in dark view, header and body not modeled on them).
+
+Step 12.4 (reader modeled on Gmail and Proton Mail: top bar actions, folder chip, conversation cards, scrolling email page, Show pictures bar, Unsubscribe, sticky reply bar; Sent folder is synced so replies appear in threads): added, verify in CI and on a device.
+
+Known issues (12.4):
+- Threads are built from the subject (Re:/Fwd: removed) among cached messages of one account. Different conversations with the same subject are merged. Messages that are not cached yet do not appear.
+- The email page is a WebView sized by its content inside the screen scroll. Very long emails and nested scrolling were not tested on a device.
+- Pinch zoom is off. Wide emails are scaled to fit the width.
+- Dark view inverts the page. Emails that are already dark can look wrong; "Original colors" turns it off.
+- Unsubscribe opens the link or mail app after the usual link confirmation. It does not do the one-click POST.
+- The home list does not group threads yet.
+
 ## Next
 
-Compose and Settings redesign, then the remaining sections from the list: account settings, storage and data, outbox, search upgrade, interactions settings.
+Compose and Settings redesign, then the remaining sections: account settings, storage and data, outbox, search upgrade, interactions settings.
