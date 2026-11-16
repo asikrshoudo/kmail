@@ -106,4 +106,10 @@ interface MessageDao {
             "ORDER BY m.receivedAtMillis DESC, m.uid DESC LIMIT :limit",
     )
     fun observeUnreadInbox(limit: Int): Flow<List<MessageEntity>>
+
+    @Query(
+        "SELECT folderId AS folderId, COUNT(*) AS count FROM messages " +
+            "WHERE isRead = 0 AND removedAtMillis IS NULL GROUP BY folderId",
+    )
+    fun observeUnreadCounts(): Flow<List<FolderUnread>>
 }

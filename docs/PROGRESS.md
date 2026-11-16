@@ -182,6 +182,14 @@ Known issues (11.1):
 - Starred and Unread views cover only messages already cached, and Unread covers inboxes only.
 - Tapping a notification restarts the activity; the lock screen still covers the app when App Lock is on.
 
-## Next
+Step 11.1 on a device: build installed. Move to folder, Starred and Unread were not checked in detail.
 
-Step 11.2: account settings, storage and data, search upgrade. Step 11.3: quoted reply collapse, next/previous message, offline reading, outbox. Then UI/UX pass.
+Steps 12.1 and 12.2 (encrypted on-disk message cache with prefetch, Home redesign: search pill, date groups, colored avatars, icons, skeleton loading, sync progress bar, undo for archive and delete, drawer with icons and unread counts, Inter font): added, verify in CI and on a device.
+
+Known issues (12.x):
+- The message cache keeps up to 200 MB of encrypted files and prefetches the newest 15 inbox messages per refresh. Older messages are downloaded when opened.
+- Undo works by waiting about 4.5 seconds before asking the server. If the app is closed in that window, the action is dropped and the message stays.
+- Search filters the loaded list (sender, subject, preview). It does not search message bodies or the server yet.
+- Reader, Compose, Settings and the setup screens have not been redesigned yet (step 12.3).
+- Inter is bundled for Latin text only. The Welcome and setup screens use it too.
+- The old greeting strings are unused now.

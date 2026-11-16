@@ -279,4 +279,21 @@
     <string name="move_to">Move to…</string>
     <string name="move_title">Move to folder</string>
     <string name="move_one_account">Select messages from one account to move them.</string>
+
+    <string name="home_search_in">Search in %1$s</string>
+    <string name="home_clear_search">Clear search</string>
+    <string name="chip_attachments">Attachments</string>
+    <string name="bucket_today">Today</string>
+    <string name="bucket_yesterday">Yesterday</string>
+    <string name="bucket_week">Last 7 days</string>
+    <string name="bucket_earlier">Earlier</string>
+    <string name="home_archived">%1$d archived</string>
+    <string name="home_deleted">%1$d deleted</string>
+    <string name="home_undo">Undo</string>
+    <string name="empty_caught_up_title">You’re all caught up</string>
+    <string name="empty_caught_up_text">New mail will show up here.</string>
+    <string name="empty_nomatch_title">No matching messages</string>
+    <string name="empty_nomatch_text">Try a different search or filter.</string>
+    <string name="home_toggle_star">Toggle star</string>
+    <string name="home_sync_failed_short">Couldn’t sync</string>
 </resources>

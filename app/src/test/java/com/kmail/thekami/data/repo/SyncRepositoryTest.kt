@@ -2,6 +2,7 @@ package com.kmail.thekami.data.repo
 
 import com.kmail.thekami.data.db.AddressSuggestion
 import com.kmail.thekami.data.db.FolderDao
+import com.kmail.thekami.data.db.FolderUnread
 import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.data.db.MessageDao
 import com.kmail.thekami.data.db.MessageEntity
@@ -83,6 +84,7 @@ internal class FakeMessageDao : MessageDao {
     override fun observeUnifiedInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeStarred(limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeUnreadInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
+    override fun observeUnreadCounts() = flowOf(emptyList<FolderUnread>())
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
     override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
     override suspend fun suggestSenders(q: String, limit: Int): List<AddressSuggestion> = emptyList()
@@ -108,6 +110,12 @@ internal class FakeProvider : MailProvider {
     override suspend fun fetchFlags(folder: RemoteFolder, uidValidity: Long, fromUid: Long) = flags
     override suspend fun fetchOlder(folder: RemoteFolder, uidValidity: Long, beforeUid: Long, limit: Int) = older
 
+    var batch: MailResult<Map<Long, ByteArray>> = MailResult.Success(emptyMap())
+    val batchCalls = mutableListOf<List<Long>>()
+    override suspend fun fetchRawBatch(folder: RemoteFolder, uidValidity: Long, uids: List<Long>, maxBytesEach: Long): MailResult<Map<Long, ByteArray>> {
+        batchCalls += uids
+        return batch
+    }
     override suspend fun testConnection() = MailResult.Success(Unit)
     override suspend fun listFolders() = folders
     override suspend fun fetchHeaders(folder: RemoteFolder, afterUid: Long?, limit: Int): MailResult<FolderSnapshot> {

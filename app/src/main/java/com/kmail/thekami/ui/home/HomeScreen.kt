@@ -1,61 +1,66 @@
 package com.kmail.thekami.ui.home
 
-import android.text.format.DateFormat
-import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,22 +68,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
 import com.kmail.thekami.data.db.FolderEntity
-import com.kmail.thekami.domain.model.FolderRole
 import com.kmail.thekami.ui.setup.messageRes
-import java.time.LocalTime
-import java.util.Date
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onAddAccount: () -> Unit,
@@ -90,12 +92,18 @@ fun HomeScreen(
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var menuOpen by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
     var showMove by remember { mutableStateOf(false) }
     val selecting = state.selectedIds.isNotEmpty()
-    val listState = rememberLazyListState()
+    BackHandler(enabled = selecting) { vm.clearSelection() }
+    if (showMove) {
+        MoveDialog(state, onPick = { vm.moveSelected(it); showMove = false }, onDismiss = { showMove = false })
+    }
+
     val nearEnd by remember {
         derivedStateOf {
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
@@ -105,37 +113,49 @@ fun HomeScreen(
     LaunchedEffect(nearEnd, state.messages.size) {
         if (nearEnd && state.messages.isNotEmpty()) vm.loadMore()
     }
-    BackHandler(enabled = selecting) { vm.clearSelection() }
-    if (showMove) {
-        MoveDialog(state, onPick = { vm.moveSelected(it); showMove = false }, onDismiss = { showMove = false })
+    val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+
+    val undoLabel = stringResource(R.string.home_undo)
+    LaunchedEffect(Unit) {
+        vm.undoEvents.collect { event ->
+            val text = context.getString(
+                if (event.kind == UndoKind.ARCHIVE) R.string.home_archived else R.string.home_deleted,
+                event.count,
+            )
+            val result = snackbar.showSnackbar(text, actionLabel = undoLabel, duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) vm.undo(event.token)
+        }
     }
+
+    val mailboxName = mailboxName(state)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         modifier = modifier,
         gesturesEnabled = !selecting,
         drawerContent = {
-            Sidebar(
-                onSettings = { scope.launch { drawerState.close() }; onOpenSettings() },
-                onDrafts = { scope.launch { drawerState.close() }; onOpenDrafts() },
+            HomeDrawer(
                 state = state,
                 onSelect = {
                     vm.select(it)
                     scope.launch { drawerState.close() }
                 },
-                onAddAccount = {
-                    scope.launch { drawerState.close() }
-                    onAddAccount()
-                },
+                onDrafts = { scope.launch { drawerState.close() }; onOpenDrafts() },
+                onSettings = { scope.launch { drawerState.close() }; onOpenSettings() },
+                onAddAccount = { scope.launch { drawerState.close() }; onAddAccount() },
             )
         },
     ) {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbar) },
             floatingActionButton = {
                 if (!selecting) {
-                    FloatingActionButton(onClick = onCompose) {
-                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.home_compose))
-                    }
+                    ExtendedFloatingActionButton(
+                        onClick = onCompose,
+                        expanded = fabExpanded,
+                        icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                        text = { Text(stringResource(R.string.home_compose)) },
+                    )
                 }
             },
             topBar = {
@@ -151,93 +171,260 @@ fun HomeScreen(
                         onMove = { showMove = true },
                     )
                 } else {
-                    CenterAlignedTopAppBar(
-                        title = { Text(greeting()) },
-                        navigationIcon = {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.home_open_menu))
-                            }
-                        },
-                        actions = {
-                            Box {
-                                IconButton(onClick = { menuOpen = true }) {
-                                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
-                                }
-                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                    SortFilterItems(state.options, vm::setSort, vm::setFilter) { menuOpen = false }
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.home_refresh)) },
-                                        onClick = { menuOpen = false; vm.refresh() },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.home_select_all)) },
-                                        onClick = { menuOpen = false; vm.selectAll() },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.home_add_account)) },
-                                        onClick = { menuOpen = false; onAddAccount() },
-                                    )
-                                }
-                            }
-                        },
-                    )
+                    Column(Modifier.statusBarsPadding()) {
+                        SearchPill(
+                            query = state.query,
+                            placeholder = stringResource(R.string.home_search_in, mailboxName),
+                            options = state.options,
+                            onQuery = vm::onQuery,
+                            onMenu = { scope.launch { drawerState.open() } },
+                            onSort = vm::setSort,
+                            onRefresh = { vm.refresh(manual = true) },
+                            onSelectAll = vm::selectAll,
+                            onAddAccount = onAddAccount,
+                        )
+                        FilterChips(state.options.filter, vm::setFilter)
+                    }
                 }
             },
         ) { padding ->
             Column(Modifier.padding(padding).fillMaxSize()) {
-                OutlinedTextField(
-                    value = state.query,
-                    onValueChange = vm::onQuery,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text(stringResource(R.string.home_search_hint)) },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.extraLarge,
-                )
+                // Every sync, automatic or not, shows this thin bar.
+                if (state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth()) else Spacer(Modifier.height(4.dp))
                 state.error?.let { error ->
-                    Banner(
-                        text = stringResource(R.string.home_sync_error, stringResource(error.messageRes())),
-                        onDismiss = null,
-                    )
+                    Banner(stringResource(R.string.home_sync_error, stringResource(error.messageRes())), null)
                 }
                 state.notice?.let { notice ->
-                    actionNoticeText(notice)?.let { Banner(text = it, onDismiss = vm::dismissNotice) }
+                    actionNoticeText(notice)?.let { Banner(it, vm::dismissNotice) }
                 }
                 PullToRefreshBox(
-                    isRefreshing = state.refreshing,
-                    onRefresh = vm::refresh,
+                    isRefreshing = state.manualRefresh,
+                    onRefresh = { vm.refresh(manual = true) },
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
-                    LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                        if (state.messages.isEmpty()) {
-                            item {
-                                Column(
-                                    Modifier.fillParentMaxSize().padding(32.dp),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    Text(stringResource(R.string.home_empty_title), style = MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        stringResource(R.string.home_empty_message),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                    when {
+                        state.messages.isEmpty() && state.refreshing -> SkeletonList()
+                        state.messages.isEmpty() -> EmptyMailbox(state)
+                        else -> {
+                            val entries = remember(state.messages, state.options.sort) {
+                                buildEntries(state.messages, state.options.sort, System.currentTimeMillis())
                             }
-                        } else {
-                            items(state.messages, key = { it.id }) { item ->
-                                SwipeableMessageRow(
-                                    enabled = !selecting,
-                                    onArchive = { vm.archiveOne(item.id) },
-                                    onDelete = { vm.deleteOne(item.id) },
-                                    item = item,
-                                    selected = item.id in state.selectedIds,
-                                    onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
-                                    onLongClick = { vm.toggleSelect(item.id) },
-                                )
+                            LazyColumn(
+                                Modifier.fillMaxSize(),
+                                state = listState,
+                                contentPadding = PaddingValues(bottom = 96.dp),
+                            ) {
+                                items(
+                                    entries,
+                                    key = { if (it is ListEntry.Header) "h-${it.bucket.name}" else (it as ListEntry.Row).item.id },
+                                ) { entry ->
+                                    when (entry) {
+                                        is ListEntry.Header -> BucketHeader(entry.bucket)
+                                        is ListEntry.Row -> {
+                                            val item = entry.item
+                                            SwipeableMessageRow(
+                                                item = item,
+                                                selected = item.id in state.selectedIds,
+                                                selecting = selecting,
+                                                showAccountDot = state.sidebar.size > 1,
+                                                onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
+                                                onLongClick = { vm.toggleSelect(item.id) },
+                                                onToggleStar = { vm.toggleStar(item.id, !item.isStarred) },
+                                                onArchive = { vm.archiveOne(item.id) },
+                                                onDelete = { vm.deleteOne(item.id) },
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun mailboxName(state: HomeUiState): String = when (val sel = state.selection) {
+    MailboxSelection.Unified -> stringResource(R.string.home_all_inboxes)
+    MailboxSelection.Starred -> stringResource(R.string.sidebar_starred)
+    MailboxSelection.Unread -> stringResource(R.string.sidebar_unread)
+    is MailboxSelection.Folder ->
+        state.sidebar.flatMap { it.folders }.firstOrNull { it.id == sel.id }?.let { folderLabel(it) }
+            ?: stringResource(R.string.role_inbox)
+}
+
+@Composable
+private fun SearchPill(
+    query: String,
+    placeholder: String,
+    options: ListOptions,
+    onQuery: (String) -> Unit,
+    onMenu: () -> Unit,
+    onSort: (SortOrder) -> Unit,
+    onRefresh: () -> Unit,
+    onSelectAll: () -> Unit,
+    onAddAccount: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(56.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onMenu) {
+                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.home_open_menu))
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = onQuery,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                modifier = Modifier.weight(1f),
+                decorationBox = { inner ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (query.isEmpty()) {
+                            Text(
+                                placeholder,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        }
+                        inner()
+                    }
+                },
+            )
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQuery("") }) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_clear_search))
+                }
+            } else {
+                Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        SortOrder.entries.forEach { sort ->
+                            val label = when (sort) {
+                                SortOrder.NEWEST -> R.string.sort_newest
+                                SortOrder.OLDEST -> R.string.sort_oldest
+                                SortOrder.UNREAD_FIRST -> R.string.sort_unread_first
+                                SortOrder.READ_FIRST -> R.string.sort_read_first
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(label)) },
+                                trailingIcon = { if (options.sort == sort) Icon(Icons.Filled.Check, contentDescription = null) },
+                                onClick = { onSort(sort); menuOpen = false },
+                            )
+                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.home_refresh)) },
+                            onClick = { menuOpen = false; onRefresh() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.home_select_all)) },
+                            onClick = { menuOpen = false; onSelectAll() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.home_add_account)) },
+                            onClick = { menuOpen = false; onAddAccount() },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+private fun FilterChips(active: ListFilter, onFilter: (ListFilter) -> Unit) {
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        listOf(
+            ListFilter.UNREAD to R.string.sidebar_unread,
+            ListFilter.STARRED to R.string.sidebar_starred,
+            ListFilter.ATTACHMENTS to R.string.chip_attachments,
+        ).forEach { (filter, label) ->
+            val selected = active == filter
+            FilterChip(
+                selected = selected,
+                onClick = { onFilter(if (selected) ListFilter.ALL else filter) },
+                label = { Text(stringResource(label)) },
+                leadingIcon = if (selected) {
+                    { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                } else {
+                    null
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BucketHeader(bucket: DateBucket) {
+    Text(
+        text = stringResource(
+            when (bucket) {
+                DateBucket.TODAY -> R.string.bucket_today
+                DateBucket.YESTERDAY -> R.string.bucket_yesterday
+                DateBucket.LAST_7_DAYS -> R.string.bucket_week
+                DateBucket.EARLIER -> R.string.bucket_earlier
+            },
+        ),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun EmptyMailbox(state: HomeUiState) {
+    val filtering = state.query.isNotBlank() || state.options.filter != ListFilter.ALL
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            if (filtering) Icons.Filled.Search else Icons.Outlined.Inbox,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.outline,
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            stringResource(if (filtering) R.string.empty_nomatch_title else R.string.empty_caught_up_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            stringResource(if (filtering) R.string.empty_nomatch_text else R.string.empty_caught_up_text),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun Banner(text: String, onDismiss: (() -> Unit)?) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+            )
+            if (onDismiss != null) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.compose_discard_keep))
                 }
             }
         }
@@ -265,9 +452,11 @@ private fun SelectionBar(
             }
         },
         actions = {
-            TextButton(onClick = onArchive) { Text(stringResource(R.string.home_archive)) }
+            IconButton(onClick = onArchive) {
+                Icon(Icons.Outlined.Archive, contentDescription = stringResource(R.string.home_archive))
+            }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.home_delete))
+                Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.home_delete))
             }
             Box {
                 IconButton(onClick = { menu = true }) {
@@ -278,300 +467,16 @@ private fun SelectionBar(
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_mark_unread)) }, onClick = { menu = false; onMarkRead(false) })
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_star)) }, onClick = { menu = false; onStar(true) })
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_unstar)) }, onClick = { menu = false; onStar(false) })
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.move_to)) },
+                        leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                        onClick = { menu = false; onMove() },
+                    )
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_select_all)) }, onClick = { menu = false; onSelectAll() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.move_to)) }, onClick = { menu = false; onMove() })
                 }
             }
         },
     )
-}
-
-@Composable
-private fun Banner(text: String, onDismiss: (() -> Unit)?) {
-    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
-            )
-            if (onDismiss != null) {
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.compose_discard_keep))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun greeting(): String {
-    val hour = remember { LocalTime.now().hour }
-    return stringResource(
-        when (hour) {
-            in 5..11 -> R.string.greeting_morning
-            in 12..16 -> R.string.greeting_afternoon
-            in 17..20 -> R.string.greeting_evening
-            else -> R.string.greeting_night
-        },
-    )
-}
-
-@Composable
-fun folderLabel(folder: FolderEntity): String = when (folder.role) {
-    FolderRole.INBOX -> stringResource(R.string.role_inbox)
-    FolderRole.SENT -> stringResource(R.string.role_sent)
-    FolderRole.DRAFTS -> stringResource(R.string.role_drafts)
-    FolderRole.ARCHIVE -> stringResource(R.string.role_archive)
-    FolderRole.SPAM -> stringResource(R.string.role_spam)
-    FolderRole.TRASH -> stringResource(R.string.role_trash)
-    FolderRole.CUSTOM -> folder.displayName
-}
-
-@Composable
-private fun Sidebar(
-    onSettings: () -> Unit,
-    onDrafts: () -> Unit,
-    state: HomeUiState,
-    onSelect: (MailboxSelection) -> Unit,
-    onAddAccount: () -> Unit,
-) {
-    ModalDrawerSheet {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 12.dp)) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp),
-            )
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.home_all_inboxes)) },
-                selected = state.selection is MailboxSelection.Unified,
-                onClick = { onSelect(MailboxSelection.Unified) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.sidebar_starred)) },
-                selected = state.selection is MailboxSelection.Starred,
-                onClick = { onSelect(MailboxSelection.Starred) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.sidebar_unread)) },
-                selected = state.selection is MailboxSelection.Unread,
-                onClick = { onSelect(MailboxSelection.Unread) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-            state.sidebar.forEach { entry ->
-                Text(
-                    text = entry.account.emailAddress,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-                )
-                entry.folders.forEach { folder ->
-                    NavigationDrawerItem(
-                        label = { Text(folderLabel(folder)) },
-                        selected = state.selection == MailboxSelection.Folder(folder.id),
-                        onClick = { onSelect(MailboxSelection.Folder(folder.id)) },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                    )
-                }
-            }
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.home_settings)) },
-                selected = false,
-                onClick = onSettings,
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.home_drafts)) },
-                selected = false,
-                onClick = onDrafts,
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-            HorizontalDivider(Modifier.padding(vertical = 12.dp, horizontal = 28.dp))
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.home_add_account)) },
-                selected = false,
-                onClick = onAddAccount,
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-        }
-    }
-}
-
-@Composable
-private fun formatTime(millis: Long): String {
-    if (millis <= 0) return ""
-    val context = LocalContext.current
-    return if (DateUtils.isToday(millis)) {
-        DateFormat.getTimeFormat(context).format(Date(millis))
-    } else {
-        DateUtils.formatDateTime(context, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH)
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun MessageRow(
-    item: MessageItem,
-    selected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val weight = if (item.isRead) FontWeight.Normal else FontWeight.Bold
-    val initial = item.sender.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
-    val background = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(background)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(44.dp),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(if (selected) "\u2713" else initial, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-        }
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.sender.ifBlank { stringResource(R.string.home_unknown_sender) },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = weight,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = formatTime(item.receivedAtMillis),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.subject.ifBlank { stringResource(R.string.home_no_subject) },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = weight,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (item.hasAttachments) Text("\uD83D\uDCCE", modifier = Modifier.padding(start = 6.dp))
-                if (item.isStarred) {
-                    Text("\u2605", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 6.dp))
-                }
-            }
-            if (item.snippet.isNotBlank()) {
-                Text(
-                    text = item.snippet,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SortFilterItems(
-    options: ListOptions,
-    onSort: (SortOrder) -> Unit,
-    onFilter: (ListFilter) -> Unit,
-    onDone: () -> Unit,
-) {
-    SortOrder.entries.forEach { sort ->
-        val label = when (sort) {
-            SortOrder.NEWEST -> R.string.sort_newest
-            SortOrder.OLDEST -> R.string.sort_oldest
-            SortOrder.UNREAD_FIRST -> R.string.sort_unread_first
-            SortOrder.READ_FIRST -> R.string.sort_read_first
-        }
-        DropdownMenuItem(
-            text = { Text(stringResource(label)) },
-            trailingIcon = { if (options.sort == sort) Text("\u2713") },
-            onClick = { onSort(sort); onDone() },
-        )
-    }
-    HorizontalDivider()
-    ListFilter.entries.forEach { filter ->
-        val label = when (filter) {
-            ListFilter.ALL -> R.string.filter_all
-            ListFilter.UNREAD -> R.string.filter_unread
-            ListFilter.STARRED -> R.string.filter_starred
-            ListFilter.ATTACHMENTS -> R.string.filter_attachments
-        }
-        DropdownMenuItem(
-            text = { Text(stringResource(label)) },
-            trailingIcon = { if (options.filter == filter) Text("\u2713") },
-            onClick = { onFilter(filter); onDone() },
-        )
-    }
-    HorizontalDivider()
-}
-
-/** Swipe right to archive, left to delete. The row snaps back; it disappears when the server accepted the action. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SwipeableMessageRow(
-    enabled: Boolean,
-    onArchive: () -> Unit,
-    onDelete: () -> Unit,
-    item: MessageItem,
-    selected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> onArchive()
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
-                SwipeToDismissBoxValue.Settled -> Unit
-            }
-            false
-        },
-    )
-    SwipeToDismissBox(
-        state = state,
-        enableDismissFromStartToEnd = enabled,
-        enableDismissFromEndToStart = enabled,
-        backgroundContent = {
-            val archive = state.dismissDirection == SwipeToDismissBoxValue.StartToEnd
-            val delete = state.dismissDirection == SwipeToDismissBoxValue.EndToStart
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        when {
-                            archive -> MaterialTheme.colorScheme.primaryContainer
-                            delete -> MaterialTheme.colorScheme.errorContainer
-                            else -> Color.Transparent
-                        },
-                    )
-                    .padding(horizontal = 24.dp),
-                contentAlignment = if (delete) Alignment.CenterEnd else Alignment.CenterStart,
-            ) {
-                if (archive) Text(stringResource(R.string.home_archive), style = MaterialTheme.typography.titleSmall)
-                if (delete) Text(stringResource(R.string.home_delete), style = MaterialTheme.typography.titleSmall)
-            }
-        },
-    ) {
-        MessageRow(item = item, selected = selected, onClick = onClick, onLongClick = onLongClick)
-    }
 }
 
 @Composable
@@ -582,7 +487,7 @@ private fun MoveDialog(state: HomeUiState, onPick: (FolderEntity) -> Unit, onDis
     } else {
         emptyList()
     }
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.move_title)) },
         text = {
@@ -592,7 +497,9 @@ private fun MoveDialog(state: HomeUiState, onPick: (FolderEntity) -> Unit, onDis
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     folders.forEach { folder ->
                         TextButton(onClick = { onPick(folder) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(folderLabel(folder), modifier = Modifier.fillMaxWidth())
+                            Icon(folderIcon(folder.role), contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.size(12.dp))
+                            Text(folderLabel(folder), modifier = Modifier.weight(1f))
                         }
                     }
                 }

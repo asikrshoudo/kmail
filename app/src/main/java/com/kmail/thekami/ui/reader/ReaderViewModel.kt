@@ -8,6 +8,7 @@ import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.data.db.MessageDao
 import com.kmail.thekami.data.repo.MessageActionResult
 import com.kmail.thekami.data.repo.MessageActionsRepository
+import com.kmail.thekami.data.repo.BodyStore
 import com.kmail.thekami.data.repo.MessageBodyCache
 import com.kmail.thekami.domain.mail.MailError
 import com.kmail.thekami.domain.mail.MailProvider
@@ -51,6 +52,7 @@ class ReaderViewModel @Inject constructor(
     private val folderDao: FolderDao,
     private val providers: ProviderSource,
     private val cache: MessageBodyCache,
+    private val bodies: BodyStore,
     private val actions: MessageActionsRepository,
 ) : ViewModel() {
 
@@ -75,12 +77,15 @@ class ReaderViewModel @Inject constructor(
             }
             _state.update { it.copy(starred = entity.isStarred, folders = folderDao.listByAccount(entity.accountId)) }
             val remote = RemoteFolder(folder.remoteName, folder.displayName, folder.role)
-            val raw = cache.get(entity.id) ?: when (val r = provider.fetchRawMessage(remote, entity.uidValidity, entity.uid)) {
+            val raw = cache.get(entity.id) ?: bodies.get(entity.id)?.also { cache.put(entity.id, it) } ?: when (val r = provider.fetchRawMessage(remote, entity.uidValidity, entity.uid)) {
                 is MailResult.Failure -> {
                     _state.update { it.copy(loading = false, error = r.error) }
                     return@launch
                 }
-                is MailResult.Success -> r.value.also { cache.put(entity.id, it) }
+                is MailResult.Success -> r.value.also {
+                    cache.put(entity.id, it)
+                    bodies.put(entity.id, it)
+                }
             }
             val message = try {
                 withContext(Dispatchers.Default) { MimeParser.parse(raw) }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kmail.thekami.data.repo.AccountRepository
+import com.kmail.thekami.data.repo.BodyStore
 import com.kmail.thekami.data.repo.MessageBodyCache
 import com.kmail.thekami.data.security.AppLockManager
 import com.kmail.thekami.data.security.AppLockStore
@@ -45,6 +46,7 @@ class SettingsViewModel @Inject constructor(
     private val store: AppLockStore,
     private val manager: AppLockManager,
     private val cache: MessageBodyCache,
+    private val bodies: BodyStore,
     private val appearanceStore: AppearanceStore,
     private val syncPrefs: SyncPrefs,
     private val scheduler: SyncScheduler,
@@ -142,6 +144,7 @@ class SettingsViewModel @Inject constructor(
         }
         accountRepository.removeAccount(id)
         cache.clear()
+        bodies.clear()
         return PinVerify.Ok
     }
 }

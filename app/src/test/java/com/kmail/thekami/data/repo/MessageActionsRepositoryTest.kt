@@ -30,6 +30,8 @@ private class RecordingProvider : MailProvider {
         MailResult.Success(emptyList())
     override suspend fun fetchFlags(folder: RemoteFolder, uidValidity: Long, fromUid: Long): MailResult<List<RemoteFlags>> =
         MailResult.Success(emptyList())
+    override suspend fun fetchRawBatch(folder: RemoteFolder, uidValidity: Long, uids: List<Long>, maxBytesEach: Long): MailResult<Map<Long, ByteArray>> =
+        MailResult.Success(emptyMap())
     override suspend fun testConnection(): MailResult<Unit> = MailResult.Success(Unit)
     override suspend fun listFolders(): MailResult<List<RemoteFolder>> = MailResult.Success(emptyList())
     override suspend fun fetchHeaders(folder: RemoteFolder, afterUid: Long?, limit: Int): MailResult<FolderSnapshot> =

@@ -70,4 +70,12 @@ interface MailProvider {
         uidValidity: Long,
         fromUid: Long,
     ): MailResult<List<com.kmail.thekami.domain.model.RemoteFlags>>
+
+    /** Raw messages for [uids] over one connection. Messages bigger than [maxBytesEach] are skipped. */
+    suspend fun fetchRawBatch(
+        folder: RemoteFolder,
+        uidValidity: Long,
+        uids: List<Long>,
+        maxBytesEach: Long,
+    ): MailResult<Map<Long, ByteArray>>
 }

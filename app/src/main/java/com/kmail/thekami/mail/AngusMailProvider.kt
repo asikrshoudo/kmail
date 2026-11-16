@@ -368,6 +368,29 @@ class AngusMailProvider(
         }
     }
 
+    override suspend fun fetchRawBatch(
+        folder: RemoteFolder,
+        uidValidity: Long,
+        uids: List<Long>,
+        maxBytesEach: Long,
+    ): MailResult<Map<Long, ByteArray>> {
+        if (uids.isEmpty()) return MailResult.Success(emptyMap())
+        return withStore { store ->
+            store.withFolder(folder.remoteName, Folder.READ_ONLY) { _, uf ->
+                checkValidity(uf, uidValidity)
+                val out: MutableMap<Long, ByteArray> = LinkedHashMap()
+                for (uid in uids) {
+                    val message = uf.getMessageByUID(uid) ?: continue
+                    if (message.size > maxBytesEach) continue
+                    val bytes = ByteArrayOutputStream()
+                    message.writeTo(bytes)
+                    out[uid] = bytes.toByteArray()
+                }
+                out.toMap()
+            }
+        }
+    }
+
     private companion object {
         const val MAX_RAW_BYTES = 25L * 1024 * 1024
     }

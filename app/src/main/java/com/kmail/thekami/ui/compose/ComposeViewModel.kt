@@ -17,6 +17,7 @@ import com.kmail.thekami.data.drafts.DraftStore
 import com.kmail.thekami.sync.SyncPrefs
 import com.kmail.thekami.data.prefs.SignatureStore
 import com.kmail.thekami.data.repo.AccountRepository
+import com.kmail.thekami.data.repo.BodyStore
 import com.kmail.thekami.data.repo.MessageBodyCache
 import com.kmail.thekami.domain.mail.MailError
 import com.kmail.thekami.domain.mail.MailResult
@@ -93,6 +94,7 @@ class ComposeViewModel @Inject constructor(
     private val folderDao: FolderDao,
     private val providers: ProviderSource,
     private val cache: MessageBodyCache,
+    private val bodies: BodyStore,
     private val draftStore: DraftStore,
     private val signatureStore: SignatureStore,
     private val contactSuggester: ContactSuggester,
@@ -195,7 +197,7 @@ class ComposeViewModel @Inject constructor(
 
     private suspend fun loadParsed(entity: MessageEntity): ParsedMessage? {
         val folder = folderDao.getById(entity.folderId) ?: return null
-        val raw = cache.get(entity.id) ?: run {
+        val raw = cache.get(entity.id) ?: bodies.get(entity.id) ?: run {
             val provider = providers.forAccount(entity.accountId) ?: return null
             val remote = RemoteFolder(folder.remoteName, folder.displayName, folder.role)
             when (val r = provider.fetchRawMessage(remote, entity.uidValidity, entity.uid)) {
