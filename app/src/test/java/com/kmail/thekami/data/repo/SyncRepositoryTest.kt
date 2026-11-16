@@ -95,7 +95,10 @@ internal class FakeMessageDao : MessageDao {
         rows.filter { it.folderId == folderId && it.uidValidity == uidValidity && it.removedAtMillis == null }
     override suspend fun newUnreadInbox(afterId: Long): List<MessageEntity> =
         rows.filter { it.id > afterId && !it.isRead && it.removedAtMillis == null }
-    override suspend fun updateSnippet(id: Long, snippet: String) {}
+    override suspend fun updateSnippet(id: Long, snippet: String) {
+        val i = rows.indexOfFirst { it.id == id }
+        if (i >= 0) rows[i] = rows[i].copy(snippet = snippet)
+    }
 }
 
 internal class FakeProvider : MailProvider {
