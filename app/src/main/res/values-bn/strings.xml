@@ -2,4 +2,5 @@
 <resources>
     <string name="app_tagline">একটি মেইল ক্লায়েন্ট</string>
     <string name="settings_signature_title">সিগনেচার</string>
+    <string name="settings_cancel">বাতিল</string>
 </resources>

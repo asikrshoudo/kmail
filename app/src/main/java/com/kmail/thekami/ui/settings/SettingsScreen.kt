@@ -450,7 +450,7 @@ fun SettingsScreen(
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { dialog = null }) { Text(stringResource(R.string.compose_discard_keep)) }
+                        TextButton(onClick = { dialog = null }) { Text(stringResource(R.string.settings_cancel)) }
                     },
                 )
             }
@@ -683,6 +683,6 @@ private fun PinDialog(
         confirmButton = {
             TextButton(onClick = { onConfirm(values.toList()) }, enabled = values.all { it.length >= 4 }) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.compose_discard_keep)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }

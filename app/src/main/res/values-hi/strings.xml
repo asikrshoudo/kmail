@@ -2,4 +2,5 @@
 <resources>
     <string name="app_tagline">एक मेल क्लाइंट</string>
     <string name="settings_signature_title">सिग्नेचर</string>
+    <string name="settings_cancel">रद्द करें</string>
 </resources>

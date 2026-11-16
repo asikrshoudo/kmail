@@ -2,4 +2,5 @@
 <resources>
     <string name="app_tagline">عميل بريد إلكتروني</string>
     <string name="settings_signature_title">التوقيع</string>
+    <string name="settings_cancel">إلغاء</string>
 </resources>

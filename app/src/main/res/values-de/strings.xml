@@ -2,4 +2,5 @@
 <resources>
     <string name="app_tagline">Ein E-Mail-Client</string>
     <string name="settings_signature_title">Signatur</string>
+    <string name="settings_cancel">Abbrechen</string>
 </resources>

@@ -313,4 +313,5 @@
         <item quantity="other">%1$d messages</item>
     </plurals>
     <string name="settings_signature_title">Signature</string>
+    <string name="settings_cancel">Cancel</string>
 </resources>

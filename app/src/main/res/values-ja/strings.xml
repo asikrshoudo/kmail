@@ -2,4 +2,5 @@
 <resources>
     <string name="app_tagline">メールクライアント</string>
     <string name="settings_signature_title">署名</string>
+    <string name="settings_cancel">キャンセル</string>
 </resources>
