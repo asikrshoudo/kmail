@@ -312,4 +312,5 @@
         <item quantity="one">%1$d message</item>
         <item quantity="other">%1$d messages</item>
     </plurals>
+    <string name="settings_signature_title">Signature</string>
 </resources>

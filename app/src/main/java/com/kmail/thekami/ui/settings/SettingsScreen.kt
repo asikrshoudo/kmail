@@ -4,14 +4,15 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,23 +21,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +55,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +68,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,6 +77,8 @@ import com.kmail.thekami.data.security.PinVerify
 import com.kmail.thekami.domain.model.Account
 import com.kmail.thekami.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
+
+private enum class SettingsPage { Hub, Accounts, Signature, Appearance, Sync, Privacy, About }
 
 private sealed interface SettingsDialog {
     data object SetPin : SettingsDialog
@@ -90,7 +96,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     vm: SettingsViewModel = hiltViewModel(),
 ) {
-    val accounts by vm.accounts.collectAsStateWithLifecycle()
+       val accounts by vm.accounts.collectAsStateWithLifecycle()
     val lock by vm.lock.collectAsStateWithLifecycle()
     val appearance by vm.appearance.collectAsStateWithLifecycle()
     val sync by vm.sync.collectAsStateWithLifecycle()
@@ -98,10 +104,25 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     var dialogError by remember { mutableStateOf<String?>(null) }
+    var pageName by rememberSaveable { mutableStateOf(SettingsPage.Hub.name) }
+    var detailId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val page = SettingsPage.valueOf(pageName)
+    val detail = detailId?.let { id -> accounts.orEmpty().firstOrNull { it.id == id } }
 
     LaunchedEffect(accounts) {
         if (accounts?.isEmpty() == true) onNoAccounts()
+        if (detailId != null && accounts?.none { it.id == detailId } == true) detailId = null
     }
+
+    fun goBack() {
+        when {
+            detailId != null -> detailId = null
+            page != SettingsPage.Hub -> pageName = SettingsPage.Hub.name
+            else -> onBack()
+        }
+    }
+    BackHandler(enabled = page != SettingsPage.Hub || detailId != null) { goBack() }
 
     val errWrong = stringResource(R.string.lock_wrong)
     val errWait = stringResource(R.string.lock_wait, 0)
@@ -115,196 +136,249 @@ fun SettingsScreen(
     val errWeak = stringResource(R.string.settings_pin_error_weak)
     val errMismatch = stringResource(R.string.settings_pin_error_mismatch)
 
+    val title = if (detail != null) {
+        detail.emailAddress
+    } else {
+        stringResource(
+            when (page) {
+                SettingsPage.Hub -> R.string.settings_title
+                SettingsPage.Accounts -> R.string.settings_accounts
+                SettingsPage.Signature -> R.string.settings_signature_title
+                SettingsPage.Appearance -> R.string.settings_appearance
+                SettingsPage.Sync -> R.string.settings_sync
+                SettingsPage.Privacy -> R.string.settings_privacy
+                SettingsPage.About -> R.string.settings_about
+            },
+        )
+    }
+    val themeSummary = stringResource(
+        when (appearance.mode) {
+            ThemeMode.Light -> R.string.appearance_light
+            ThemeMode.Dark -> R.string.appearance_dark
+            else -> R.string.appearance_system
+        },
+    )
+
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { goBack() }) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.reader_back))
                     }
                 },
             )
         },
     ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            // ---- Accounts ----
-            SettingsSection(R.string.settings_accounts, Icons.Rounded.AccountCircle) {
-                accounts.orEmpty().forEach { account ->
-                    AccountRow(account) { dialogError = null; dialog = SettingsDialog.Remove(account) }
-                }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onAddAccount)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(Icons.Rounded.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text(
-                        stringResource(R.string.home_add_account),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
+        Crossfade(
+            targetState = if (detailId != null) "detail" else pageName,
+            modifier = Modifier.padding(padding).fillMaxSize(),
+            label = "settings-page",
+        ) { key ->
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                when (key) {
+                    "detail" -> if (detail != null) {
+                        AccountDetailPage(detail) { dialogError = null; dialog = SettingsDialog.Remove(detail) }
+                    }
 
-            // ---- Compose & Signature (own section, unchanged) ----
-            SignatureSection(accounts.orEmpty())
+                    SettingsPage.Accounts.name -> {
+                        accounts.orEmpty().forEach { account ->
+                            AccountRow(account) { detailId = account.id }
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onAddAccount)
+                                .padding(horizontal = 20.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                stringResource(R.string.home_add_account),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
 
-            // ---- Appearance ----
-            SettingsSection(R.string.settings_appearance, Icons.Rounded.Palette) {
-                ChipGroup(R.string.appearance_theme) {
-                    ChipRow(
-                        options = listOf(
-                            ThemeMode.System to stringResource(R.string.appearance_system),
-                            ThemeMode.Light to stringResource(R.string.appearance_light),
-                            ThemeMode.Dark to stringResource(R.string.appearance_dark),
-                        ),
-                        selected = appearance.mode,
-                        onSelect = vm::setThemeMode,
-                        equalWidth = true,
-                    )
-                }
-                SwitchRow(
-                    R.string.appearance_amoled,
-                    R.string.appearance_amoled_desc,
-                    appearance.amoled,
-                    vm::setAmoled,
-                    enabled = appearance.mode != ThemeMode.Light,
-                )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    SwitchRow(
-                        R.string.appearance_dynamic,
-                        R.string.appearance_dynamic_desc,
-                        appearance.dynamicColor,
-                        vm::setDynamicColor,
-                    )
-                }
-            }
+                    SettingsPage.Signature.name -> {
+                        Column(
+                            Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            SignatureSection(accounts.orEmpty())
+                        }
+                    }
 
-            // ---- Sync & Notifications ----
-            SettingsSection(R.string.settings_sync, Icons.Rounded.Sync) {
-                SwitchRow(R.string.settings_bg_sync, R.string.settings_bg_sync_desc, sync.backgroundSync, vm::setBackgroundSync)
-                if (sync.backgroundSync) {
-                    ChipGroup(R.string.settings_interval) {
-                        ChipRow(
-                            options = listOf(5, 10, 15, 30, 60).map {
-                                it to stringResource(R.string.settings_interval_minutes, it)
-                            },
-                            selected = sync.intervalMinutes,
-                            onSelect = vm::setInterval,
-                            equalWidth = true,
+                    SettingsPage.Appearance.name -> {
+                        ChipGroup(R.string.appearance_theme) {
+                            ChipRow(
+                                options = listOf(
+                                    ThemeMode.System to stringResource(R.string.appearance_system),
+                                    ThemeMode.Light to stringResource(R.string.appearance_light),
+                                    ThemeMode.Dark to stringResource(R.string.appearance_dark),
+                                ),
+                                selected = appearance.mode,
+                                onSelect = vm::setThemeMode,
+                                equalWidth = true,
+                            )
+                        }
+                        SwitchRow(
+                            R.string.appearance_amoled,
+                            R.string.appearance_amoled_desc,
+                            appearance.amoled,
+                            vm::setAmoled,
+                            enabled = appearance.mode != ThemeMode.Light,
                         )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            SwitchRow(
+                                R.string.appearance_dynamic,
+                                R.string.appearance_dynamic_desc,
+                                appearance.dynamicColor,
+                                vm::setDynamicColor,
+                            )
+                        }
                     }
-                }
-                SwitchRow(R.string.settings_notifications, null, sync.notifications, vm::setNotifications)
-                SwitchRow(
-                    R.string.settings_hide_content,
-                    null,
-                    sync.hideContent,
-                    vm::setHideContent,
-                    enabled = sync.notifications,
-                )
-            }
 
-            // ---- Privacy & Security ----
-            SettingsSection(R.string.settings_privacy, Icons.Rounded.Lock) {
-                SwitchRow(
-                    R.string.settings_app_lock,
-                    R.string.settings_app_lock_desc,
-                    lock.enabled,
-                    { on ->
-                        dialogError = null
-                        dialog = if (on) SettingsDialog.SetPin else SettingsDialog.DisableLock
-                    },
-                )
-                if (lock.enabled) {
-                    if (lock.biometricAvailable) {
-                        SwitchRow(R.string.settings_biometric, null, lock.biometric, vm::setBiometric)
-                    }
-                    ActionRow(
-                        title = stringResource(R.string.settings_recovery),
-                        subtitle = stringResource(
-                            if (lock.hasRecovery) R.string.settings_recovery_on else R.string.settings_recovery_off,
-                        ),
-                        action = stringResource(
-                            if (lock.hasRecovery) R.string.settings_recovery_change else R.string.settings_recovery_setup,
-                        ),
-                        onAction = { dialogError = null; dialog = SettingsDialog.Recovery },
-                    )
-                    ChipGroup(R.string.settings_auto_lock) {
-                        ChipRow(
-                            options = listOf(0, 60, 300, 900).map { seconds ->
-                                seconds to if (seconds == 0) {
-                                    stringResource(R.string.settings_auto_lock_immediate)
-                                } else {
-                                    stringResource(R.string.settings_auto_lock_minutes, seconds / 60)
-                                }
-                            },
-                            selected = lock.autoLockSeconds,
-                            onSelect = vm::setAutoLock,
-                        )
-                    }
-                    Text(
-                        stringResource(R.string.settings_lock_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-            }
-
-            // ---- About ----
-            SettingsSection(R.string.settings_about, Icons.Rounded.Info) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            try {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.settings_privacy_url))),
+                    SettingsPage.Sync.name -> {
+                        SwitchRow(R.string.settings_bg_sync, R.string.settings_bg_sync_desc, sync.backgroundSync, vm::setBackgroundSync)
+                        if (sync.backgroundSync) {
+                            ChipGroup(R.string.settings_interval) {
+                                ChipRow(
+                                    options = listOf(5, 10, 15, 30, 60).map {
+                                        it to stringResource(R.string.settings_interval_minutes, it)
+                                    },
+                                    selected = sync.intervalMinutes,
+                                    onSelect = vm::setInterval,
+                                    equalWidth = true,
                                 )
-                            } catch (e: ActivityNotFoundException) {
-                                // no browser installed
                             }
                         }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.settings_privacy_policy),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        Icons.AutoMirrored.Rounded.OpenInNew,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                        SwitchRow(R.string.settings_notifications, null, sync.notifications, vm::setNotifications)
+                        SwitchRow(
+                            R.string.settings_hide_content,
+                            null,
+                            sync.hideContent,
+                            vm::setHideContent,
+                            enabled = sync.notifications,
+                        )
+                    }
 
-            Column(
-                Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.settings_brand), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    stringResource(R.string.settings_version, vm.versionName),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+                    SettingsPage.Privacy.name -> {
+                        SwitchRow(
+                            R.string.settings_app_lock,
+                            R.string.settings_app_lock_desc,
+                            lock.enabled,
+                            { on ->
+                                dialogError = null
+                                dialog = if (on) SettingsDialog.SetPin else SettingsDialog.DisableLock
+                            },
+                        )
+                        if (lock.enabled) {
+                            if (lock.biometricAvailable) {
+                                SwitchRow(R.string.settings_biometric, null, lock.biometric, vm::setBiometric)
+                            }
+                            ActionRow(
+                                title = stringResource(R.string.settings_recovery),
+                                subtitle = stringResource(
+                                    if (lock.hasRecovery) R.string.settings_recovery_on else R.string.settings_recovery_off,
+                                ),
+                                action = stringResource(
+                                    if (lock.hasRecovery) R.string.settings_recovery_change else R.string.settings_recovery_setup,
+                                ),
+                                onAction = { dialogError = null; dialog = SettingsDialog.Recovery },
+                            )
+                            ChipGroup(R.string.settings_auto_lock) {
+                                ChipRow(
+                                    options = listOf(0, 60, 300, 900).map { seconds ->
+                                        seconds to if (seconds == 0) {
+                                            stringResource(R.string.settings_auto_lock_immediate)
+                                        } else {
+                                            stringResource(R.string.settings_auto_lock_minutes, seconds / 60)
+                                        }
+                                    },
+                                    selected = lock.autoLockSeconds,
+                                    onSelect = vm::setAutoLock,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.settings_lock_note),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+
+                    SettingsPage.About.name -> {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    try {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.settings_privacy_url))),
+                                        )
+                                    } catch (e: ActivityNotFoundException) {
+                                        // no browser installed
+                                    }
+                                }
+                                .padding(horizontal = 20.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(R.string.settings_privacy_policy),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Rounded.OpenInNew,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Column(
+                            Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(stringResource(R.string.settings_brand), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                stringResource(R.string.settings_version, vm.versionName),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+
+                    else -> {
+                        val open = { p: SettingsPage -> pageName = p.name }
+                        NavRow(
+                            Icons.Rounded.AccountCircle,
+                            stringResource(R.string.settings_accounts),
+                            accounts.orEmpty().joinToString { it.emailAddress }.ifEmpty { null },
+                        ) { open(SettingsPage.Accounts) }
+                        NavDivider()
+                        NavRow(Icons.Rounded.EditNote, stringResource(R.string.settings_signature_title), null) {
+                            open(SettingsPage.Signature)
+                        }
+                        NavDivider()
+                        NavRow(Icons.Rounded.Palette, stringResource(R.string.settings_appearance), themeSummary) {
+                            open(SettingsPage.Appearance)
+                        }
+                        NavDivider()
+                        NavRow(Icons.Rounded.Sync, stringResource(R.string.settings_sync), null) { open(SettingsPage.Sync) }
+                        NavDivider()
+                        NavRow(Icons.Rounded.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }
+                        NavDivider()
+                        NavRow(Icons.Rounded.Info, stringResource(R.string.settings_about), null) { open(SettingsPage.About) }
+                    }
+                }
             }
         }
     }
@@ -343,12 +417,12 @@ fun SettingsScreen(
             },
         )
         is SettingsDialog.Remove -> {
-            val title = stringResource(R.string.settings_remove_title, d.account.emailAddress)
-            val message = stringResource(R.string.settings_remove_message)
+            val dTitle = stringResource(R.string.settings_remove_title, d.account.emailAddress)
+            val dMessage = stringResource(R.string.settings_remove_message)
             if (lock.enabled) {
                 PinDialog(
-                    title = title,
-                    message = message + "\n\n" + stringResource(R.string.settings_pin_enter_to_continue),
+                    title = dTitle,
+                    message = dMessage + "\n\n" + stringResource(R.string.settings_pin_enter_to_continue),
                     labels = listOf(stringResource(R.string.settings_pin_enter)),
                     confirmLabel = stringResource(R.string.settings_remove_confirm),
                     error = dialogError,
@@ -363,8 +437,8 @@ fun SettingsScreen(
             } else {
                 AlertDialog(
                     onDismissRequest = { dialog = null },
-                    title = { Text(title) },
-                    text = { Text(message) },
+                    title = { Text(dTitle) },
+                    text = { Text(dMessage) },
                     confirmButton = {
                         TextButton(onClick = {
                             scope.launch {
@@ -389,55 +463,60 @@ fun SettingsScreen(
     }
 }
 
-/** A titled group of settings: icon + title above, rows inside a rounded card. */
 @Composable
-private fun SettingsSection(
-    @StringRes title: Int,
-    icon: ImageVector,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-            Text(
-                stringResource(title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-            ),
-        ) {
-            Column(Modifier.padding(vertical = 6.dp), content = content)
-        }
+private fun Avatar(label: String, size: Dp) {
+    Box(
+        Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label.take(1).uppercase(),
+            style = if (size >= 56.dp) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
     }
 }
 
 @Composable
-private fun AccountRow(account: Account, onRemove: () -> Unit) {
+private fun NavRow(icon: ImageVector, title: String, subtitle: String?, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Box(
-            Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                account.emailAddress.take(1).uppercase(),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
+        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun NavDivider() {
+    HorizontalDivider(
+        Modifier.padding(start = 60.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+    )
+}
+
+@Composable
+private fun AccountRow(account: Account, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Avatar(account.emailAddress, 40.dp)
         Text(
             account.emailAddress,
             style = MaterialTheme.typography.bodyLarge,
@@ -445,8 +524,32 @@ private fun AccountRow(account: Account, onRemove: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onRemove) {
-            Text(stringResource(R.string.settings_remove_account), color = MaterialTheme.colorScheme.error)
+        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun AccountDetailPage(account: Account, onRemove: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.padding(top = 32.dp)) { Avatar(account.emailAddress, 72.dp) }
+        Text(
+            account.emailAddress,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
+        )
+        HorizontalDivider()
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onRemove).padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Text(
+                stringResource(R.string.settings_remove_account),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
@@ -459,25 +562,25 @@ private fun SwitchRow(
     onChange: (Boolean) -> Unit,
     enabled: Boolean = true,
 ) {
-    val textAlpha = if (enabled) 1f else 0.38f
+    val alpha = if (enabled) 1f else 0.38f
     Row(
         Modifier
             .fillMaxWidth()
             .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) {
             Text(
                 stringResource(title),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = textAlpha),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             )
             if (description != null) {
                 Text(
                     stringResource(description),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = textAlpha),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
                 )
             }
         }
@@ -488,7 +591,7 @@ private fun SwitchRow(
 @Composable
 private fun ActionRow(title: String, subtitle: String?, action: String, onAction: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -504,11 +607,10 @@ private fun ActionRow(title: String, subtitle: String?, action: String, onAction
         TextButton(onClick = onAction) { Text(action) }
     }
 }
-
 @Composable
 private fun ChipGroup(@StringRes title: Int, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
