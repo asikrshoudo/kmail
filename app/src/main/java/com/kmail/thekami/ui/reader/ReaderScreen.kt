@@ -1,6 +1,5 @@
 package com.kmail.thekami.ui.reader
 
-import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -98,7 +97,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.viewinterop.rememberNestedScrollInteropConnection
+import androidx.compose.ui.input.nestedscroll.rememberNestedScrollInteropConnection
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
