@@ -11,28 +11,52 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.outlined.Forward
+import androidx.compose.material.icons.automirrored.outlined.Reply
+import androidx.compose.material.icons.automirrored.outlined.ReplyAll
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,11 +80,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -70,8 +96,9 @@ import com.kmail.thekami.mail.Mailbox
 import com.kmail.thekami.mail.ParsedAttachment
 import com.kmail.thekami.mail.ParsedMessage
 import com.kmail.thekami.ui.components.ErrorState
-import com.kmail.thekami.ui.components.LoadingState
+import com.kmail.thekami.ui.home.AvatarColors
 import com.kmail.thekami.ui.home.actionNoticeText
+import com.kmail.thekami.ui.home.folderIcon
 import com.kmail.thekami.ui.home.folderLabel
 import com.kmail.thekami.ui.setup.messageRes
 import kotlinx.coroutines.Dispatchers
@@ -93,23 +120,6 @@ fun ReaderScreen(
     val context = LocalContext.current
 
     LaunchedEffect(state.finished) { if (state.finished) onBack() }
-    if (showMove) {
-        AlertDialog(
-            onDismissRequest = { showMove = false },
-            title = { Text(stringResource(R.string.move_title)) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    state.folders.forEach { f ->
-                        TextButton(onClick = { showMove = false; vm.moveTo(f) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(folderLabel(f), modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { showMove = false }) { Text(stringResource(R.string.reader_link_cancel)) } },
-        )
-    }
 
     Scaffold(
         modifier = modifier,
@@ -118,12 +128,11 @@ fun ReaderScreen(
         floatingActionButton = {
             if (state.message != null) {
                 ReaderActionBar(
-                    starred = state.starred,
                     onReply = { onCompose("reply", vm.messageId) },
+                    onReplyAll = { onCompose("replyall", vm.messageId) },
                     onForward = { onCompose("forward", vm.messageId) },
                     onArchive = vm::archive,
                     onDelete = vm::delete,
-                    onStar = vm::toggleStar,
                 )
             }
         },
@@ -137,6 +146,9 @@ fun ReaderScreen(
                 },
                 actions = {
                     if (state.message != null) {
+                        IconButton(onClick = vm::markUnread) {
+                            Icon(Icons.Outlined.MarkEmailUnread, contentDescription = stringResource(R.string.reader_mark_unread))
+                        }
                         Box {
                             IconButton(onClick = { menuOpen = true }) {
                                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reader_more))
@@ -144,32 +156,31 @@ fun ReaderScreen(
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.move_to)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        showMove = true
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.compose_reply_all)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onCompose("replyall", vm.messageId)
-                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                                    onClick = { menuOpen = false; showMove = true },
                                 )
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             stringResource(
-                                                if (state.allowRemote) R.string.reader_hide_images
-                                                else R.string.reader_show_images,
+                                                if (state.darkView) R.string.reader_original_colors else R.string.reader_dark_view,
                                             ),
                                         )
                                     },
-                                    onClick = {
-                                        menuOpen = false
-                                        vm.setAllowRemote(!state.allowRemote)
-                                    },
+                                    onClick = { menuOpen = false; vm.setDarkView(!state.darkView) },
                                 )
+                                if (state.blockedRemote > 0 || state.allowRemote) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(
+                                                    if (state.allowRemote) R.string.reader_hide_images else R.string.reader_show_images,
+                                                ),
+                                            )
+                                        },
+                                        onClick = { menuOpen = false; vm.setAllowRemote(!state.allowRemote) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -182,7 +193,7 @@ fun ReaderScreen(
             val message = s.message
             val error = s.error
             when {
-                s.loading -> LoadingState(message = stringResource(R.string.loading_generic))
+                s.loading -> ReaderSkeleton()
                 s.missing -> Text(
                     stringResource(R.string.reader_missing),
                     modifier = Modifier.align(Alignment.Center).padding(32.dp),
@@ -197,13 +208,36 @@ fun ReaderScreen(
                     notice = s.notice?.let { actionNoticeText(it) },
                     message = message,
                     html = s.html,
+                    starred = s.starred,
+                    darkView = s.darkView,
                     blockedRemote = s.blockedRemote,
                     allowRemote = s.allowRemote,
+                    onToggleStar = vm::toggleStar,
                     onShowImages = { vm.setAllowRemote(true) },
                     onLink = { pendingLink = it },
                 )
             }
         }
+    }
+
+    if (showMove) {
+        AlertDialog(
+            onDismissRequest = { showMove = false },
+            title = { Text(stringResource(R.string.move_title)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    state.folders.forEach { f ->
+                        TextButton(onClick = { showMove = false; vm.moveTo(f) }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(folderIcon(f.role), contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(folderLabel(f), modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showMove = false }) { Text(stringResource(R.string.reader_link_cancel)) } },
+        )
     }
 
     pendingLink?.let { url ->
@@ -237,8 +271,11 @@ private fun ReaderContent(
     notice: String?,
     message: ParsedMessage,
     html: String,
+    starred: Boolean,
+    darkView: Boolean,
     blockedRemote: Int,
     allowRemote: Boolean,
+    onToggleStar: () -> Unit,
     onShowImages: () -> Unit,
     onLink: (String) -> Unit,
 ) {
@@ -280,6 +317,8 @@ private fun ReaderContent(
         }
         ReaderHeader(
             message = message,
+            starred = starred,
+            onToggleStar = onToggleStar,
             showImagesBanner = blockedRemote > 0 && !allowRemote,
             onShowImages = onShowImages,
             onSave = {
@@ -287,21 +326,27 @@ private fun ReaderContent(
                 saveLauncher.launch(it.fileName)
             },
         )
-        // The email itself is a white page with rounded top corners. It reaches the bottom so the
-        // floating action bar sits on it; the page has bottom padding so no text is hidden.
+        // The email is its own page. With the dark view on, the page is black to match the app.
         Surface(
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            color = Color.White,
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            color = if (darkView) Color.Black else Color.White,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
         ) {
-            EmailWebView(html = html, allowRemote = allowRemote, onLink = onLink, modifier = Modifier.fillMaxSize())
+            EmailWebView(
+                html = html,
+                allowRemote = allowRemote,
+                dark = darkView,
+                onLink = onLink,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
-
 @Composable
 private fun ReaderHeader(
     message: ParsedMessage,
+    starred: Boolean,
+    onToggleStar: () -> Unit,
     showImagesBanner: Boolean,
     onShowImages: () -> Unit,
     onSave: (ParsedAttachment) -> Unit,
@@ -310,58 +355,108 @@ private fun ReaderHeader(
     var expanded by rememberSaveable { mutableStateOf(false) }
     val from = message.from
     val senderName = from?.name ?: from?.address ?: stringResource(R.string.home_unknown_sender)
-    val initial = senderName.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
-    val date = message.dateMillis?.let {
+    val shortDate = message.dateMillis?.let {
+        DateUtils.formatDateTime(
+            context, it,
+            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH,
+        )
+    }.orEmpty()
+    val fullDate = message.dateMillis?.let {
         DateUtils.formatDateTime(
             context, it,
             DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_YEAR,
         )
     }
 
-    Column(
-        Modifier
-            .heightIn(max = 320.dp)
-            .verticalScroll(rememberScrollState())
-            .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = message.subject.ifBlank { stringResource(R.string.home_no_subject) },
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(44.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(initial, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-            }
-            Column(Modifier.weight(1f)) {
-                Text(senderName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                if (from != null) {
-                    Text(from.address, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                }
-                Text(
-                    recipientSummary(message.to),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Column(Modifier.padding(start = 20.dp, end = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Text(
+                text = message.subject.ifBlank { stringResource(R.string.home_no_subject) },
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(top = 6.dp),
+            )
+            IconButton(onClick = onToggleStar) {
+                Icon(
+                    imageVector = if (starred) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                    contentDescription = stringResource(R.string.home_toggle_star),
+                    tint = if (starred) Color(0xFFF4B400) else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = { expanded = !expanded }) {
-                Text(stringResource(if (expanded) R.string.reader_details_hide else R.string.reader_details_show))
+        }
+        Row(
+            Modifier.padding(end = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).background(AvatarColors.colorFor(from?.address ?: senderName)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    senderName.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        senderName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(shortDate, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(
+                    Modifier.clickable(onClick = { expanded = !expanded }),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        recipientSummary(message.to),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Icon(
+                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = stringResource(if (expanded) R.string.reader_details_hide else R.string.reader_details_show),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
-        if (expanded) {
-            DetailLine(stringResource(R.string.reader_label_from), from?.display())
-            DetailLine(stringResource(R.string.reader_label_to), message.to.joinToString(", ") { it.display() }.ifEmpty { null })
-            DetailLine(stringResource(R.string.reader_label_cc), message.cc.joinToString(", ") { it.display() }.ifEmpty { null })
-            DetailLine(stringResource(R.string.reader_label_date), date)
-            DetailLine(stringResource(R.string.reader_label_id), message.messageId)
-        } else if (date != null) {
-            Text(date, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AnimatedVisibility(expanded) {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.padding(end = 12.dp).fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DetailLine(stringResource(R.string.reader_label_from), from?.display())
+                    DetailLine(stringResource(R.string.reader_label_to), message.to.joinToString(", ") { it.display() }.ifEmpty { null })
+                    DetailLine(stringResource(R.string.reader_label_cc), message.cc.joinToString(", ") { it.display() }.ifEmpty { null })
+                    DetailLine(stringResource(R.string.reader_label_date), fullDate)
+                    DetailLine(stringResource(R.string.reader_label_id), message.messageId)
+                }
+            }
         }
         if (showImagesBanner) {
-            Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.padding(end = 12.dp),
+            ) {
                 Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Image, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.reader_images_blocked),
                         style = MaterialTheme.typography.bodySmall,
@@ -372,16 +467,52 @@ private fun ReaderHeader(
             }
         }
         if (message.attachments.isNotEmpty()) {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                message.attachments.forEach { attachment ->
-                    AssistChip(
-                        onClick = { onSave(attachment) },
-                        label = {
-                            Text("${attachment.fileName} \u00B7 " + Formatter.formatShortFileSize(context, attachment.sizeBytes))
-                        },
-                    )
-                }
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(end = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                message.attachments.forEach { AttachmentCard(it) { onSave(it) } }
             }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentCard(attachment: ParsedAttachment, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val icon = when (AttachmentKinds.of(attachment.fileName, attachment.mimeType)) {
+        AttachmentKind.IMAGE -> Icons.Outlined.Image
+        AttachmentKind.PDF -> Icons.Outlined.PictureAsPdf
+        AttachmentKind.DOCUMENT -> Icons.Outlined.Description
+        AttachmentKind.ARCHIVE -> Icons.Outlined.FolderZip
+        AttachmentKind.OTHER -> Icons.Outlined.InsertDriveFile
+    }
+    Surface(onClick = onClick, shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Row(
+            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column {
+                Text(
+                    attachment.fileName,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 180.dp),
+                )
+                Text(
+                    Formatter.formatShortFileSize(context, attachment.sizeBytes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.Outlined.Download,
+                contentDescription = stringResource(R.string.reader_save_attachment, attachment.fileName),
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
@@ -398,7 +529,7 @@ private fun DetailLine(label: String, value: String?) {
     if (value.isNullOrBlank()) return
     Row {
         Text(
-            label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(72.dp),
+            label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(56.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
@@ -407,12 +538,11 @@ private fun DetailLine(label: String, value: String?) {
 
 @Composable
 private fun ReaderActionBar(
-    starred: Boolean,
     onReply: () -> Unit,
+    onReplyAll: () -> Unit,
     onForward: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
-    onStar: () -> Unit,
 ) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
@@ -420,23 +550,49 @@ private fun ReaderActionBar(
         tonalElevation = 6.dp,
         shadowElevation = 8.dp,
     ) {
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onReply) { Text(stringResource(R.string.compose_reply)) }
-            TextButton(onClick = onForward) { Text(stringResource(R.string.compose_forward)) }
-            TextButton(onClick = onArchive) { Text(stringResource(R.string.home_archive)) }
+        Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onReply) {
+                Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = stringResource(R.string.compose_reply))
+            }
+            IconButton(onClick = onReplyAll) {
+                Icon(Icons.AutoMirrored.Outlined.ReplyAll, contentDescription = stringResource(R.string.compose_reply_all))
+            }
+            IconButton(onClick = onForward) {
+                Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = stringResource(R.string.compose_forward))
+            }
+            IconButton(onClick = onArchive) {
+                Icon(Icons.Outlined.Archive, contentDescription = stringResource(R.string.home_archive))
+            }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.home_delete))
+                Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.home_delete))
             }
-            IconButton(onClick = onStar) {
-                Icon(
-                    Icons.Filled.Star,
-                    contentDescription = stringResource(if (starred) R.string.home_unstar else R.string.home_star),
-                    tint = if (starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        }
+    }
+}
+
+/** Placeholder shown while the message is fetched or parsed. */
+@Composable
+private fun ReaderSkeleton() {
+    val transition = rememberInfiniteTransition(label = "reader-skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "alpha",
+    )
+    val tint = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = alpha)
+    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.height(22.dp).fillMaxWidth(0.7f).clip(RoundedCornerShape(8.dp)).background(tint))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(tint))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.height(12.dp).width(140.dp).clip(RoundedCornerShape(6.dp)).background(tint))
+                Box(Modifier.height(10.dp).width(100.dp).clip(RoundedCornerShape(5.dp)).background(tint))
             }
+        }
+        Spacer(Modifier.height(8.dp))
+        repeat(7) { i ->
+            Box(Modifier.height(12.dp).fillMaxWidth(if (i % 3 == 2) 0.55f else 1f).clip(RoundedCornerShape(6.dp)).background(tint))
         }
     }
 }
@@ -445,6 +601,7 @@ private fun ReaderActionBar(
 private fun EmailWebView(
     html: String,
     allowRemote: Boolean,
+    dark: Boolean,
     onLink: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -463,8 +620,6 @@ private fun EmailWebView(
                 settings.displayZoomControls = false
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
-                // Emails are designed for a white page, whatever the app theme is.
-                setBackgroundColor(android.graphics.Color.WHITE)
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         val url = request.url
@@ -477,6 +632,7 @@ private fun EmailWebView(
             }
         },
         update = { view ->
+            view.setBackgroundColor(if (dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
             view.settings.blockNetworkLoads = !allowRemote
             if (view.tag != html) {
                 view.tag = html

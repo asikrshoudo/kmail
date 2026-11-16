@@ -95,4 +95,33 @@ class HtmlSanitizerTest {
         assertTrue(html.contains("href=\"https://e.com/x?y=1&amp;z=2\""))
         assertTrue(html.endsWith(".</div>"))
     }
+
+    @Test
+    fun darkViewAddsAnInvertFilterOnlyWhenAsked() {
+        assertTrue(HtmlSanitizer.sanitize("<p>x</p>", emptyMap(), false, darkView = true).html.contains("invert(1)"))
+        assertFalse(clean("<p>x</p>").html.contains("invert(1)"))
+    }
+
+    @Test
+    fun quotedRepliesAreFoldedWhenThereIsNewText() {
+        val html = clean(
+            "<p>Thanks, I will look at it tomorrow morning.</p><blockquote>old quoted text that is here</blockquote>",
+        ).html
+        assertTrue(html.contains("<details class=\"kmail-quote\">"))
+        assertTrue(html.contains("old quoted text"))
+    }
+
+    @Test
+    fun aMessageThatIsOnlyAQuoteIsNotFolded() {
+        assertFalse(clean("<blockquote>forwarded text only</blockquote>").html.contains("<details"))
+    }
+
+    @Test
+    fun plainTextQuoteLinesBecomeABlockquote() {
+        val html = HtmlSanitizer.textToHtml("thanks\n> old line 1\n> old line 2\nbye")
+        assertTrue(html.contains("<blockquote>old line 1\nold line 2</blockquote>"))
+        assertFalse(html.contains("&gt; old"))
+        assertTrue(html.startsWith("<div style=\"white-space:pre-wrap\">thanks"))
+        assertTrue(html.endsWith("bye</div>"))
+    }
 }

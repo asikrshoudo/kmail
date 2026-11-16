@@ -4,6 +4,7 @@ import java.util.Base64
 import java.util.Locale
 import org.jsoup.Jsoup
 import org.jsoup.nodes.DataNode
+import org.jsoup.nodes.Element
 import org.jsoup.safety.Cleaner
 import org.jsoup.safety.Safelist
 
@@ -12,6 +13,7 @@ data class SanitizedHtml(val html: String, val blockedRemoteCount: Int)
 /**
  * Email HTML is untrusted. Scripts, forms, frames, event handlers and unsafe URLs are removed,
  * remote content is blocked unless allowed, and a Content-Security-Policy is added as a second layer.
+ * Quoted earlier messages are folded behind a small "..." button.
  */
 object HtmlSanitizer {
     private val safelist: Safelist = Safelist.relaxed()
@@ -29,8 +31,18 @@ object HtmlSanitizer {
         .addEnforcedAttribute("a", "rel", "noopener noreferrer")
 
     private const val BASE_CSS =
-        "body{margin:0;padding:12px 12px 96px;overflow-wrap:anywhere;word-wrap:break-word;color:#202124;background:#fff}" +
-            "img{max-width:100% !important;height:auto}table{max-width:100%}"
+        "body{margin:0;padding:12px 16px 96px;overflow-wrap:anywhere;word-wrap:break-word;color:#202124;background:#fff}" +
+            "img{max-width:100% !important;height:auto}table{max-width:100%}" +
+            "blockquote{margin:8px 0;padding-left:12px;border-left:3px solid #c4c7c5;color:#5f6368}" +
+            "details.kmail-quote{margin:8px 0}" +
+            "details.kmail-quote>summary{display:inline-block;list-style:none;cursor:pointer;padding:0 10px;" +
+            "border-radius:12px;background:#e8eaed;color:#5f6368;font-size:13px;line-height:20px}" +
+            "details.kmail-quote>summary::-webkit-details-marker{display:none}"
+
+    /** Inverts the page and then inverts pictures back, the usual way to get a dark email without scripts. */
+    private const val DARK_CSS =
+        "html{filter:invert(1) hue-rotate(180deg)}" +
+            "img,picture,video,svg,[style*=\"background-image\"]{filter:invert(1) hue-rotate(180deg)}"
 
     private val IMPORT = Regex("@import[^;]*;?", RegexOption.IGNORE_CASE)
     private val EXPRESSION = Regex("expression\\s*\\(", RegexOption.IGNORE_CASE)
@@ -39,13 +51,19 @@ object HtmlSanitizer {
     private val URL_FN = Regex("url\\(\\s*(['\"]?)([^)'\"]*)\\1\\s*\\)", RegexOption.IGNORE_CASE)
     private val URL_IN_TEXT = Regex("https?://[^\\s<>\"']+", RegexOption.IGNORE_CASE)
     private val SAFE_IMAGE_TYPES = setOf("image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/bmp")
+    private const val QUOTE_SELECTOR = "blockquote, div.gmail_quote, div.protonmail_quote, div.yahoo_quoted"
 
-    fun render(message: ParsedMessage, allowRemote: Boolean): SanitizedHtml {
+    fun render(message: ParsedMessage, allowRemote: Boolean, darkView: Boolean = false): SanitizedHtml {
         val html = message.htmlBody ?: textToHtml(message.textBody.orEmpty())
-        return sanitize(html, message.inlineImages, allowRemote)
+        return sanitize(html, message.inlineImages, allowRemote, darkView)
     }
 
-    fun sanitize(html: String, inlineImages: Map<String, InlineImage>, allowRemote: Boolean): SanitizedHtml {
+    fun sanitize(
+        html: String,
+        inlineImages: Map<String, InlineImage>,
+        allowRemote: Boolean,
+        darkView: Boolean = false,
+    ): SanitizedHtml {
         val dirty = Jsoup.parse(html)
         // The cleaner keeps only the body, so move head styles in first (keeping their order).
         dirty.head().select("style").reversed().forEach { dirty.body().prependChild(it) }
@@ -87,12 +105,27 @@ object HtmlSanitizer {
             }
         }
 
+        collapseQuotes(doc.body())
+
         val csp = "default-src 'none'; img-src data:" + (if (allowRemote) " http: https:" else "") +
             "; style-src 'unsafe-inline'"
         doc.head().prepend("<meta http-equiv=\"Content-Security-Policy\" content=\"$csp\">")
         doc.head().prepend("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
-        doc.head().append("<style>$BASE_CSS</style>")
+        doc.head().append("<style>$BASE_CSS${if (darkView) DARK_CSS else ""}</style>")
         return SanitizedHtml(doc.outerHtml(), blocked)
+    }
+
+    /** Only the outermost quote is folded, and only if the message has other text besides the quote. */
+    private fun collapseQuotes(body: Element) {
+        val bodyTextLength = body.text().length
+        for (quote in body.select(QUOTE_SELECTOR)) {
+            if (quote.parents().any { it.tagName() == "details" || it.tagName() == "blockquote" }) continue
+            if (bodyTextLength <= quote.text().length + 10) continue
+            val details = Element("details").addClass("kmail-quote")
+            details.appendElement("summary").text("\u2022\u2022\u2022")
+            quote.before(details)
+            details.appendChild(quote)
+        }
     }
 
     internal fun cleanCss(css: String, allowRemote: Boolean, onBlocked: () -> Unit): String {
@@ -117,8 +150,9 @@ object HtmlSanitizer {
     private fun escape(s: String) =
         s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
-    fun textToHtml(text: String): String {
-        val out = StringBuilder("<div style=\"white-space:pre-wrap\">")
+    /** Escapes [text] and turns web addresses into links. */
+    private fun linkify(text: String): String {
+        val out = StringBuilder()
         var last = 0
         for (m in URL_IN_TEXT.findAll(text)) {
             out.append(escape(text.substring(last, m.range.first)))
@@ -133,6 +167,35 @@ object HtmlSanitizer {
             last = m.range.last + 1
         }
         out.append(escape(text.substring(last)))
+        return out.toString()
+    }
+
+    /** Lines starting with ">" become a quote block, which the reader then folds like an HTML quote. */
+    fun textToHtml(text: String): String {
+        val out = StringBuilder("<div style=\"white-space:pre-wrap\">")
+        val normal = StringBuilder()
+        val quote = StringBuilder()
+        fun flushNormal() {
+            if (normal.isNotEmpty()) out.append(linkify(normal.toString()))
+            normal.setLength(0)
+        }
+        fun flushQuote() {
+            if (quote.isNotEmpty()) out.append("<blockquote>").append(linkify(quote.toString().trimEnd('\n'))).append("</blockquote>")
+            quote.setLength(0)
+        }
+        val lines = text.replace("\r\n", "\n").split("\n")
+        lines.forEachIndexed { index, line ->
+            if (line.startsWith(">")) {
+                flushNormal()
+                quote.append(line.removePrefix(">").removePrefix(" ")).append('\n')
+            } else {
+                flushQuote()
+                normal.append(line)
+                if (index != lines.lastIndex) normal.append('\n')
+            }
+        }
+        flushQuote()
+        flushNormal()
         return out.append("</div>").toString()
     }
 }

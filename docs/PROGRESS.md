@@ -193,3 +193,16 @@ Known issues (12.x):
 - Reader, Compose, Settings and the setup screens have not been redesigned yet (step 12.3).
 - Inter is bundled for Latin text only. The Welcome and setup screens use it too.
 - The old greeting strings are unused now.
+Steps 12.1 and 12.2 on a device: installed and judged better than before by the user. Not all details were checked.
+
+Step 12.3 (reader redesign: header with star, details card, attachment cards, icon action bar, skeleton, dark view, folded quotes): added, verify in CI and on a device.
+
+Known issues (reader):
+- Dark view inverts colors with a CSS filter. It looks right for most mail but can look odd for mail with many colored areas. "Original colors" in the menu turns it off. It resets when the message is closed.
+- Folded quotes use the HTML details element, so tapping "..." opens them. Quotes in mail that does not use blockquote or the Gmail/Proton/Yahoo classes are not folded.
+- The header is not part of the scrolling page. Long subjects are cut after three lines.
+- Next and previous message by swiping is not built.
+
+## Next
+
+Compose and Settings redesign, then the remaining sections from the list: account settings, storage and data, outbox, search upgrade, interactions settings.

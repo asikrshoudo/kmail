@@ -296,4 +296,9 @@
     <string name="empty_nomatch_text">Try a different search or filter.</string>
     <string name="home_toggle_star">Toggle star</string>
     <string name="home_sync_failed_short">Couldn’t sync</string>
+
+    <string name="reader_mark_unread">Mark as unread</string>
+    <string name="reader_dark_view">Dark view</string>
+    <string name="reader_original_colors">Original colors</string>
+    <string name="reader_save_attachment">Save %1$s</string>
 </resources>
