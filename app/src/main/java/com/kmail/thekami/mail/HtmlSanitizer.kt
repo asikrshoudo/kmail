@@ -74,6 +74,8 @@ object HtmlSanitizer {
         val dirty = Jsoup.parse(html)
         // The cleaner keeps only the body, so move head styles in first (keeping their order).
         dirty.head().select("style").reversed().forEach { dirty.body().prependChild(it) }
+        // Protocol-relative URLs cannot be resolved without a base URI and the cleaner would drop them.
+        dirty.select("img[src^=//]").forEach { it.attr("src", "https:" + it.attr("src").trim()) }
         val doc = Cleaner(safelist).clean(dirty)
         doc.outputSettings().prettyPrint(false)
         var blocked = 0
