@@ -145,7 +145,16 @@ fun HomeDrawer(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(entry.account.colorArgb)))
+                        Box(
+                            Modifier.size(28.dp).clip(CircleShape).background(Color(entry.account.colorArgb)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                entry.account.emailAddress.take(1).uppercase(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White,
+                            )
+                        }
                         Text(
                             text = entry.account.emailAddress,
                             style = MaterialTheme.typography.labelLarge,
@@ -168,7 +177,7 @@ fun HomeDrawer(
                                 badge = { Badge(state.unread[folder.id]) },
                                 selected = state.selection == MailboxSelection.Folder(folder.id),
                                 onClick = { onSelect(MailboxSelection.Folder(folder.id)) },
-                                modifier = pad,
+                                modifier = pad.padding(start = 12.dp),
                             )
                         }
                     }
