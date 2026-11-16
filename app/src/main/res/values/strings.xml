@@ -314,4 +314,6 @@
     </plurals>
     <string name="settings_signature_title">Signature</string>
     <string name="settings_cancel">Cancel</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
 </resources>

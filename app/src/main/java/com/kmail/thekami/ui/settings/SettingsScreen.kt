@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PersonAdd
@@ -78,7 +79,7 @@ import com.kmail.thekami.domain.model.Account
 import com.kmail.thekami.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
-private enum class SettingsPage { Hub, Accounts, Signature, Appearance, Sync, Privacy, About }
+private enum class SettingsPage { Hub, Accounts, Signature, Appearance, Language, Sync, Privacy, About }
 
 private sealed interface SettingsDialog {
     data object SetPin : SettingsDialog
@@ -145,6 +146,7 @@ fun SettingsScreen(
                 SettingsPage.Accounts -> R.string.settings_accounts
                 SettingsPage.Signature -> R.string.settings_signature_title
                 SettingsPage.Appearance -> R.string.settings_appearance
+                SettingsPage.Language -> R.string.settings_language
                 SettingsPage.Sync -> R.string.settings_sync
                 SettingsPage.Privacy -> R.string.settings_privacy
                 SettingsPage.About -> R.string.settings_about
@@ -206,12 +208,7 @@ fun SettingsScreen(
                     }
 
                     SettingsPage.Signature.name -> {
-                        Column(
-                            Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            SignatureSection(accounts.orEmpty())
-                        }
+                        SignatureSection(accounts.orEmpty())
                     }
 
                     SettingsPage.Appearance.name -> {
@@ -242,6 +239,10 @@ fun SettingsScreen(
                                 vm::setDynamicColor,
                             )
                         }
+                    }
+
+                    SettingsPage.Language.name -> {
+                        LanguagePage()
                     }
 
                     SettingsPage.Sync.name -> {
@@ -372,6 +373,14 @@ fun SettingsScreen(
                             open(SettingsPage.Appearance)
                         }
                         NavDivider()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            NavRow(
+                                Icons.Rounded.Language,
+                                stringResource(R.string.settings_language),
+                                currentLanguageLabel(),
+                            ) { open(SettingsPage.Language) }
+                            NavDivider()
+                        }
                         NavRow(Icons.Rounded.Sync, stringResource(R.string.settings_sync), null) { open(SettingsPage.Sync) }
                         NavDivider()
                         NavRow(Icons.Rounded.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }

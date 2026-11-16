@@ -3,4 +3,6 @@
     <string name="app_tagline">메일 클라이언트</string>
     <string name="settings_signature_title">서명</string>
     <string name="settings_cancel">취소</string>
+    <string name="settings_language">언어</string>
+    <string name="settings_language_system">시스템 기본값</string>
 </resources>

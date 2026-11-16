@@ -3,4 +3,6 @@
     <string name="app_tagline">عميل بريد إلكتروني</string>
     <string name="settings_signature_title">التوقيع</string>
     <string name="settings_cancel">إلغاء</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_system">افتراضي النظام</string>
 </resources>
