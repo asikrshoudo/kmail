@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.reader
 
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
