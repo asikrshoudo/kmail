@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class Appearance(
     val mode: ThemeMode = ThemeMode.System,
     val amoled: Boolean = false,
-    val dynamicColor: Boolean = true,
+    val dynamicColor: Boolean = false,
 )
 
 @Singleton
@@ -35,6 +35,6 @@ class AppearanceStore @Inject constructor(
     private fun read() = Appearance(
         mode = runCatching { ThemeMode.valueOf(prefs.getString("mode", null) ?: "System") }.getOrDefault(ThemeMode.System),
         amoled = prefs.getBoolean("amoled", false),
-        dynamicColor = prefs.getBoolean("dynamic", true),
+        dynamicColor = prefs.getBoolean("dynamic", false),
     )
 }

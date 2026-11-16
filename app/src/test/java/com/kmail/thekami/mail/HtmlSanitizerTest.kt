@@ -124,4 +124,22 @@ class HtmlSanitizerTest {
         assertTrue(html.startsWith("<div style=\"white-space:pre-wrap\">thanks"))
         assertTrue(html.endsWith("bye</div>"))
     }
+
+    @Test
+    fun protocolRelativeImagesAreBlockedOrUpgradedToHttps() {
+        val blocked = clean("<img src=\"//cdn.example.com/a.png\">")
+        assertEquals(1, blocked.blockedRemoteCount)
+        assertFalse(blocked.html.contains("cdn.example.com"))
+        val allowed = clean("<img src=\"//cdn.example.com/a.png\">", allow = true)
+        assertTrue(allowed.html.contains("src=\"https://cdn.example.com/a.png\""))
+    }
+
+    @Test
+    fun backgroundAttributesFollowTheSameRule() {
+        val blocked = clean("<table background=\"https://t.example/bg.png\"><tr><td>x</td></tr></table>")
+        assertEquals(1, blocked.blockedRemoteCount)
+        assertFalse(blocked.html.contains("t.example"))
+        val allowed = clean("<table background=\"https://t.example/bg.png\"><tr><td>x</td></tr></table>", allow = true)
+        assertTrue(allowed.html.contains("https://t.example/bg.png"))
+    }
 }

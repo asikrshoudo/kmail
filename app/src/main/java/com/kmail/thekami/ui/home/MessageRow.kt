@@ -24,12 +24,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.AttachFile
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,13 +44,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kmail.thekami.R
 import java.util.Date
+
+private val StarAmber = Color(0xFFF2A900)
 
 @Composable
 private fun formatTime(millis: Long): String {
@@ -76,12 +80,20 @@ fun SwipeableMessageRow(
     onToggleStar: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalHapticFeedback.current
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> onArchive()
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onArchive()
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onDelete()
+                }
                 SwipeToDismissBoxValue.Settled -> Unit
             }
             false
@@ -89,6 +101,7 @@ fun SwipeableMessageRow(
     )
     SwipeToDismissBox(
         state = state,
+        modifier = modifier,
         enableDismissFromStartToEnd = !selecting,
         enableDismissFromEndToStart = !selecting,
         backgroundContent = {
@@ -107,8 +120,8 @@ fun SwipeableMessageRow(
                     .padding(horizontal = 24.dp),
                 contentAlignment = if (delete) Alignment.CenterEnd else Alignment.CenterStart,
             ) {
-                if (archive) Icon(Icons.Outlined.Archive, contentDescription = stringResource(R.string.home_archive))
-                if (delete) Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.home_delete))
+                if (archive) Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.home_archive))
+                if (delete) Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.home_delete))
             }
         },
     ) {
@@ -154,7 +167,12 @@ private fun MessageRow(
                     fontWeight = weight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                if (unread) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                }
             }
             Text(
                 text = item.subject.ifBlank { stringResource(R.string.home_no_subject) },
@@ -178,7 +196,7 @@ private fun MessageRow(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp, top = 2.dp)) {
                 if (item.hasAttachments) {
                     Icon(
-                        Icons.Outlined.AttachFile,
+                        Icons.Rounded.AttachFile,
                         contentDescription = stringResource(R.string.home_attachment),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -194,9 +212,9 @@ private fun MessageRow(
             }
             IconButton(onClick = onToggleStar, modifier = Modifier.size(44.dp)) {
                 Icon(
-                    imageVector = if (item.isStarred) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                    imageVector = if (item.isStarred) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                     contentDescription = stringResource(R.string.home_toggle_star),
-                    tint = if (item.isStarred) Color(0xFFF4B400) else MaterialTheme.colorScheme.outline,
+                    tint = if (item.isStarred) StarAmber else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -211,11 +229,14 @@ private fun Avatar(item: MessageItem, selected: Boolean) {
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(if (selected) MaterialTheme.colorScheme.primary else AvatarColors.colorFor(item.senderKey.ifBlank { item.sender })),
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary
+                else AvatarColors.colorFor(item.senderKey.ifBlank { item.sender }),
+            ),
         contentAlignment = Alignment.Center,
     ) {
         if (selected) {
-            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
         } else {
             Text(initial, style = MaterialTheme.typography.titleMedium, color = Color.White)
         }

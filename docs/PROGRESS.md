@@ -215,6 +215,17 @@ Known issues (12.4):
 - Unsubscribe opens the link or mail app after the usual link confirmation. It does not do the one-click POST.
 - The home list does not group threads yet.
 
+Step 12.4 on a device: built after two fixes by the user (removed the nested scroll interop imports, and the thread cap keeps the opened message inside the limit of 40).
+
+Step 13.1 (own visual identity: teal colors, rounded icons, route-specific screen transitions, drawer with fixed Settings and Add account, haptics and list animations, unread dot, remote pictures on by default, protocol-relative images and background attributes, swipe to the next or previous message): added, verify in CI and on a device.
+
+Known issues (13.1):
+- Remote pictures load by default (ImageMode.ALWAYS). The Ask and Never modes exist in code, but Settings has no control for them until step 13.2.
+- Swipe navigation goes to the neighbours in the same folder, not in the list the user came from (unified inbox, search, starred).
+- Pinch zoom is off in the reader.
+- Rounded icons replace Outlined and Filled ones everywhere. Icon names that do not exist in the rounded set show up as compile errors.
+- Dynamic colors are off by default now. People who turned them on keep them.
+
 ## Next
 
-Compose and Settings redesign, then the remaining sections: account settings, storage and data, outbox, search upgrade, interactions settings.
+Step 13.2: Settings hub with search and category pages, signatures (several, per account, reply and forward rules, picker in the composer), Storage and Data, remote pictures setting.

@@ -42,25 +42,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Forward
-import androidx.compose.material.icons.automirrored.outlined.Reply
-import androidx.compose.material.icons.automirrored.outlined.ReplyAll
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderZip
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
-import androidx.compose.material.icons.outlined.MarkEmailUnread
-import androidx.compose.material.icons.outlined.PictureAsPdf
-import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Forward
+import androidx.compose.material.icons.automirrored.rounded.Reply
+import androidx.compose.material.icons.automirrored.rounded.ReplyAll
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FolderZip
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.MarkEmailUnread
+import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -89,6 +89,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -119,12 +120,14 @@ import kotlinx.coroutines.withContext
 fun ReaderScreen(
     onBack: () -> Unit,
     onCompose: (String, Long) -> Unit,
+    onNavigate: (Long) -> Unit,
     modifier: Modifier = Modifier,
     vm: ReaderViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val swipeThreshold = with(LocalDensity.current) { 96.dp.toPx() }
     var menuOpen by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
     var pendingLink by remember { mutableStateOf<String?>(null) }
@@ -167,28 +170,28 @@ fun ReaderScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.reader_back))
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.reader_back))
                     }
                 },
                 actions = {
                     if (state.thread.isNotEmpty()) {
                         IconButton(onClick = vm::archive) {
-                            Icon(Icons.Outlined.Archive, contentDescription = stringResource(R.string.home_archive))
+                            Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.home_archive))
                         }
                         IconButton(onClick = vm::delete) {
-                            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.home_delete))
+                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.home_delete))
                         }
                         IconButton(onClick = vm::markUnread) {
-                            Icon(Icons.Outlined.MarkEmailUnread, contentDescription = stringResource(R.string.reader_mark_unread))
+                            Icon(Icons.Rounded.MarkEmailUnread, contentDescription = stringResource(R.string.reader_mark_unread))
                         }
                         Box {
                             IconButton(onClick = { menuOpen = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reader_more))
+                                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.reader_more))
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.move_to)) },
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                                    leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                                     onClick = { menuOpen = false; showMove = true },
                                 )
                                 DropdownMenuItem(
@@ -233,7 +236,16 @@ fun ReaderScreen(
                     onRetry = vm::load,
                 )
                 state.thread.isEmpty() -> ReaderSkeleton()
-                else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                else -> Column(
+                    Modifier
+                        .fillMaxSize()
+                        .horizontalSwipeNavigation(
+                            swipeThreshold,
+                            onNext = { state.olderId?.let(onNavigate) },
+                            onPrevious = { state.newerId?.let(onNavigate) },
+                        )
+                        .verticalScroll(rememberScrollState()),
+                ) {
                     state.notice?.let { notice ->
                         actionNoticeText(notice)?.let {
                             Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
@@ -254,7 +266,7 @@ fun ReaderScreen(
                         )
                         IconButton(onClick = vm::toggleStar) {
                             Icon(
-                                imageVector = if (state.starred) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                imageVector = if (state.starred) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                                 contentDescription = stringResource(R.string.home_toggle_star),
                                 tint = if (state.starred) Color(0xFFF4B400) else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -438,7 +450,7 @@ private fun ThreadCard(
                                 modifier = Modifier.weight(1f, fill = false),
                             )
                             Icon(
-                                if (showDetails) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                if (showDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                                 contentDescription = stringResource(if (showDetails) R.string.reader_details_hide else R.string.reader_details_show),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -464,21 +476,21 @@ private fun ThreadCard(
                         Spacer(Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OutlinedIconButton(onClick = { onCompose("reply") }, modifier = Modifier.size(40.dp), shape = RoundedCornerShape(14.dp)) {
-                                Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = stringResource(R.string.compose_reply), modifier = Modifier.size(20.dp))
+                                Icon(Icons.AutoMirrored.Rounded.Reply, contentDescription = stringResource(R.string.compose_reply), modifier = Modifier.size(20.dp))
                             }
                             Box {
                                 OutlinedIconButton(onClick = { moreOpen = true }, modifier = Modifier.size(40.dp), shape = RoundedCornerShape(14.dp)) {
-                                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.reader_more), modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.reader_more), modifier = Modifier.size(20.dp))
                                 }
                                 DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.compose_reply_all)) },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ReplyAll, contentDescription = null) },
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ReplyAll, contentDescription = null) },
                                         onClick = { moreOpen = false; onCompose("replyall") },
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.compose_forward)) },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = null) },
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Forward, contentDescription = null) },
                                         onClick = { moreOpen = false; onCompose("forward") },
                                     )
                                 }
@@ -526,7 +538,7 @@ private fun ThreadCard(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).fillMaxWidth(),
                         ) {
                             Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Icon(Icons.Outlined.Image, contentDescription = null)
+                                Icon(Icons.Rounded.Image, contentDescription = null)
                                 Text(stringResource(R.string.reader_show_pictures), style = MaterialTheme.typography.bodyLarge)
                             }
                         }
@@ -562,11 +574,11 @@ private fun ThreadCard(
 private fun AttachmentCard(attachment: ParsedAttachment, onClick: () -> Unit) {
     val context = LocalContext.current
     val icon = when (AttachmentKinds.of(attachment.fileName, attachment.mimeType)) {
-        AttachmentKind.IMAGE -> Icons.Outlined.Image
-        AttachmentKind.PDF -> Icons.Outlined.PictureAsPdf
-        AttachmentKind.DOCUMENT -> Icons.Outlined.Description
-        AttachmentKind.ARCHIVE -> Icons.Outlined.FolderZip
-        AttachmentKind.OTHER -> Icons.Outlined.InsertDriveFile
+        AttachmentKind.IMAGE -> Icons.Rounded.Image
+        AttachmentKind.PDF -> Icons.Rounded.PictureAsPdf
+        AttachmentKind.DOCUMENT -> Icons.Rounded.Description
+        AttachmentKind.ARCHIVE -> Icons.Rounded.FolderZip
+        AttachmentKind.OTHER -> Icons.Rounded.InsertDriveFile
     }
     Surface(onClick = onClick, shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(
@@ -590,7 +602,7 @@ private fun AttachmentCard(attachment: ParsedAttachment, onClick: () -> Unit) {
                 )
             }
             Icon(
-                Icons.Outlined.Download,
+                Icons.Rounded.Download,
                 contentDescription = stringResource(R.string.reader_save_attachment, attachment.fileName),
                 modifier = Modifier.size(20.dp),
             )
@@ -623,19 +635,19 @@ private fun ReplyBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             FilledTonalButton(onClick = onReply, modifier = Modifier.weight(1f)) {
-                Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Rounded.Reply, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.compose_reply), maxLines = 1)
             }
             if (showReplyAll) {
                 FilledTonalButton(onClick = onReplyAll, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.AutoMirrored.Outlined.ReplyAll, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.AutoMirrored.Rounded.ReplyAll, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.compose_reply_all), maxLines = 1)
                 }
             }
             FilledTonalButton(onClick = onForward, modifier = Modifier.weight(1f)) {
-                Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Rounded.Forward, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.compose_forward), maxLines = 1)
             }

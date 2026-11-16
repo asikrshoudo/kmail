@@ -24,16 +24,16 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -69,7 +69,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -93,6 +95,7 @@ fun HomeScreen(
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -153,7 +156,7 @@ fun HomeScreen(
                     ExtendedFloatingActionButton(
                         onClick = onCompose,
                         expanded = fabExpanded,
-                        icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                        icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
                         text = { Text(stringResource(R.string.home_compose)) },
                     )
                 }
@@ -219,17 +222,18 @@ fun HomeScreen(
                                     key = { if (it is ListEntry.Header) "h-${it.bucket.name}" else (it as ListEntry.Row).item.id },
                                 ) { entry ->
                                     when (entry) {
-                                        is ListEntry.Header -> BucketHeader(entry.bucket)
+                                        is ListEntry.Header -> BucketHeader(entry.bucket, Modifier.animateItem())
                                         is ListEntry.Row -> {
                                             val item = entry.item
                                             SwipeableMessageRow(
+                                                modifier = Modifier.animateItem(),
                                                 item = item,
                                                 selected = item.id in state.selectedIds,
                                                 selecting = selecting,
                                                 showAccountDot = state.sidebar.size > 1,
                                                 onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
-                                                onLongClick = { vm.toggleSelect(item.id) },
-                                                onToggleStar = { vm.toggleStar(item.id, !item.isStarred) },
+                                                onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); vm.toggleSelect(item.id) },
+                                                onToggleStar = { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleStar(item.id, !item.isStarred) },
                                                 onArchive = { vm.archiveOne(item.id) },
                                                 onDelete = { vm.deleteOne(item.id) },
                                             )
@@ -275,7 +279,7 @@ private fun SearchPill(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onMenu) {
-                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.home_open_menu))
+                Icon(Icons.Rounded.Menu, contentDescription = stringResource(R.string.home_open_menu))
             }
             BasicTextField(
                 value = query,
@@ -301,13 +305,13 @@ private fun SearchPill(
             )
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQuery("") }) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_clear_search))
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.home_clear_search))
                 }
             } else {
-                Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.home_more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         SortOrder.entries.forEach { sort ->
@@ -319,7 +323,7 @@ private fun SearchPill(
                             }
                             DropdownMenuItem(
                                 text = { Text(stringResource(label)) },
-                                trailingIcon = { if (options.sort == sort) Icon(Icons.Filled.Check, contentDescription = null) },
+                                trailingIcon = { if (options.sort == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
                                 onClick = { onSort(sort); menuOpen = false },
                             )
                         }
@@ -359,7 +363,7 @@ private fun FilterChips(active: ListFilter, onFilter: (ListFilter) -> Unit) {
                 onClick = { onFilter(if (selected) ListFilter.ALL else filter) },
                 label = { Text(stringResource(label)) },
                 leadingIcon = if (selected) {
-                    { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                 } else {
                     null
                 },
@@ -369,7 +373,7 @@ private fun FilterChips(active: ListFilter, onFilter: (ListFilter) -> Unit) {
 }
 
 @Composable
-private fun BucketHeader(bucket: DateBucket) {
+private fun BucketHeader(bucket: DateBucket, modifier: Modifier = Modifier) {
     Text(
         text = stringResource(
             when (bucket) {
@@ -381,7 +385,7 @@ private fun BucketHeader(bucket: DateBucket) {
         ),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp),
+        modifier = modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp),
     )
 }
 
@@ -394,7 +398,7 @@ private fun EmptyMailbox(state: HomeUiState) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
-            if (filtering) Icons.Filled.Search else Icons.Outlined.Inbox,
+            if (filtering) Icons.Rounded.Search else Icons.Rounded.Inbox,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.outline,
@@ -424,7 +428,7 @@ private fun Banner(text: String, onDismiss: (() -> Unit)?) {
             )
             if (onDismiss != null) {
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.compose_discard_keep))
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.compose_discard_keep))
                 }
             }
         }
@@ -448,19 +452,19 @@ private fun SelectionBar(
         title = { Text(stringResource(R.string.home_selected, count)) },
         navigationIcon = {
             IconButton(onClick = onCancel) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_cancel_selection))
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.home_cancel_selection))
             }
         },
         actions = {
             IconButton(onClick = onArchive) {
-                Icon(Icons.Outlined.Archive, contentDescription = stringResource(R.string.home_archive))
+                Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.home_archive))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.home_delete))
+                Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.home_delete))
             }
             Box {
                 IconButton(onClick = { menu = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.home_more_options))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_mark_read)) }, onClick = { menu = false; onMarkRead(true) })
@@ -469,7 +473,7 @@ private fun SelectionBar(
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_unstar)) }, onClick = { menu = false; onStar(false) })
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.move_to)) },
-                        leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                         onClick = { menu = false; onMove() },
                     )
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_select_all)) }, onClick = { menu = false; onSelectAll() })

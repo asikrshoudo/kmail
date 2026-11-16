@@ -120,4 +120,18 @@ interface MessageDao {
             "AND f.role NOT IN ('TRASH', 'SPAM', 'DRAFTS') ORDER BY m.receivedAtMillis ASC LIMIT 80",
     )
     suspend fun threadCandidates(accountId: String, core: String): List<MessageEntity>
+
+    @Query(
+        "SELECT id FROM messages WHERE folderId = :folderId AND uidValidity = :uidValidity AND removedAtMillis IS NULL " +
+            "AND (receivedAtMillis < :time OR (receivedAtMillis = :time AND uid < :uid)) " +
+            "ORDER BY receivedAtMillis DESC, uid DESC LIMIT 1",
+    )
+    suspend fun olderThan(folderId: Long, uidValidity: Long, time: Long, uid: Long): Long?
+
+    @Query(
+        "SELECT id FROM messages WHERE folderId = :folderId AND uidValidity = :uidValidity AND removedAtMillis IS NULL " +
+            "AND (receivedAtMillis > :time OR (receivedAtMillis = :time AND uid > :uid)) " +
+            "ORDER BY receivedAtMillis ASC, uid ASC LIMIT 1",
+    )
+    suspend fun newerThan(folderId: Long, uidValidity: Long, time: Long, uid: Long): Long?
 }

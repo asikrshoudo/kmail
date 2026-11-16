@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.kmail.thekami.data.db.FolderDao
 import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.data.db.MessageDao
+import com.kmail.thekami.data.prefs.ImagePrefs
 import com.kmail.thekami.data.repo.AccountRepository
 import com.kmail.thekami.data.repo.BodyStore
 import com.kmail.thekami.data.repo.MessageActionResult
@@ -81,6 +82,7 @@ class ReaderViewModel @Inject constructor(
     private val actions: MessageActionsRepository,
     private val appearanceStore: AppearanceStore,
     private val accountRepository: AccountRepository,
+    private val imagePrefs: ImagePrefs,
 ) : ViewModel() {
 
     val messageId: Long = savedStateHandle["messageId"] ?: -1L
@@ -164,7 +166,7 @@ class ReaderViewModel @Inject constructor(
             return BodyLoad.Failed(MailError.Unknown("parse_failed"))
         }
         parsed[id] = message
-        renderBody(id, message, allowRemote = false)
+        renderBody(id, message, allowRemote = imagePrefs.allowFor(message.from?.address))
         return BodyLoad.Ok
     }
 

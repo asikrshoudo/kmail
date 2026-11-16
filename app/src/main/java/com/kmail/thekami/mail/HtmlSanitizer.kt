@@ -23,7 +23,7 @@ object HtmlSanitizer {
         )
         .addAttributes(
             ":all", "style", "class", "dir", "lang", "align", "valign", "width", "height", "bgcolor",
-            "border", "cellpadding", "cellspacing", "colspan", "rowspan", "color", "face", "size", "title",
+            "border", "cellpadding", "cellspacing", "colspan", "rowspan", "color", "face", "size", "title", "background",
         )
         .removeProtocols("a", "href", "ftp")
         .addProtocols("a", "href", "mailto", "tel")
@@ -87,7 +87,9 @@ object HtmlSanitizer {
             el.attr("style", cleanCss(el.attr("style"), allowRemote) { blocked++ })
         }
         doc.select("img").forEach { img ->
-            val src = img.attr("src").trim()
+            val src = img.attr("src").trim().let { s ->
+                (if (s.startsWith("//")) "https:$s" else s).also { if (it != s) img.attr("src", it) }
+            }
             val lower = src.lowercase(Locale.ROOT)
             when {
                 lower.startsWith("cid:") -> {
@@ -110,6 +112,14 @@ object HtmlSanitizer {
                 }
                 else -> img.removeAttr("src")
             }
+        }
+
+        doc.select("[background]").forEach { el ->
+            val value = el.attr("background").trim().lowercase(Locale.ROOT)
+            val remote = value.startsWith("http://") || value.startsWith("https://")
+            if (remote && allowRemote) return@forEach
+            if (remote) blocked++
+            el.removeAttr("background")
         }
 
         collapseQuotes(doc.body())

@@ -86,6 +86,8 @@ internal class FakeMessageDao : MessageDao {
     override fun observeUnreadInbox(limit: Int) = flowOf(emptyList<MessageEntity>())
     override fun observeUnreadCounts() = flowOf(emptyList<FolderUnread>())
     override suspend fun threadCandidates(accountId: String, core: String): List<MessageEntity> = emptyList()
+    override suspend fun olderThan(folderId: Long, uidValidity: Long, time: Long, uid: Long): Long? = null
+    override suspend fun newerThan(folderId: Long, uidValidity: Long, time: Long, uid: Long): Long? = null
     override suspend fun getById(id: Long): MessageEntity? = rows.firstOrNull { it.id == id }
     override suspend fun getByIds(ids: List<Long>): List<MessageEntity> = rows.filter { it.id in ids }
     override suspend fun suggestSenders(q: String, limit: Int): List<AddressSuggestion> = emptyList()

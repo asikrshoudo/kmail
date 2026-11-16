@@ -61,10 +61,10 @@ fun KmailNavHost(
     NavHost(
         navController = navController,
         startDestination = startRoute,
-        enterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeIn(tween(300)) },
-        exitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeOut(tween(200)) },
-        popEnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeIn(tween(300)) },
-        popExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 4 } + fadeOut(tween(200)) },
+        enterTransition = KmailTransitions.enter,
+        exitTransition = KmailTransitions.exit,
+        popEnterTransition = KmailTransitions.popEnter,
+        popExitTransition = KmailTransitions.popExit,
     ) {
         composable(Routes.WELCOME) {
             WelcomeScreen(onGetStarted = { navController.navigate(Routes.CREDENTIALS) })
@@ -166,6 +166,9 @@ fun KmailNavHost(
         ) {
             ReaderScreen(
                 onBack = { navController.popBackStack() },
+                onNavigate = { id ->
+                    navController.navigate(Routes.reader(id)) { popUpTo(Routes.READER) { inclusive = true } }
+                },
                 onCompose = { mode, id -> navController.navigate(Routes.compose(mode, id)) },
             )
         }
