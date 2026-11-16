@@ -63,6 +63,8 @@ data class ReaderUiState(
     val finished: Boolean = false,
     val notice: MessageActionResult? = null,
     val folders: List<FolderEntity> = emptyList(),
+    val olderId: Long? = null,
+    val newerId: Long? = null,
 )
 
 private sealed interface BodyLoad {
@@ -118,6 +120,12 @@ class ReaderViewModel @Inject constructor(
             val own = accountRepository.getAccount(entity.accountId)?.emailAddress.orEmpty()
             val candidates = ThreadSubject.normalize(entity.subject).takeIf { it.isNotEmpty() }
                 ?.let { messageDao.threadCandidates(entity.accountId, it) }.orEmpty()
+            val olderId = messageDao.olderThan(
+                entity.folderId, entity.uidValidity, entity.receivedAtMillis, entity.uid,
+            )
+            val newerId = messageDao.newerThan(
+                entity.folderId, entity.uidValidity, entity.receivedAtMillis, entity.uid,
+            )
             _state.update {
                 it.copy(
                     subject = entity.subject,
@@ -129,6 +137,8 @@ class ReaderViewModel @Inject constructor(
                     starred = entity.isStarred,
                     ownEmail = own,
                     folders = folderDao.listByAccount(entity.accountId),
+                    olderId = olderId,
+                    newerId = newerId,
                 )
             }
             when (val r = loadBody(entity.id)) {
