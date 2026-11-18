@@ -1,42 +1,43 @@
 package com.kmail.thekami.ui.compose
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.AttachFile
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.text.font.FontFamily
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
-import com.kmail.thekami.data.contacts.Suggestion
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -48,16 +49,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
+import com.kmail.thekami.data.contacts.Suggestion
 import com.kmail.thekami.ui.setup.messageRes
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,6 +110,7 @@ fun ComposeScreen(
         onClose()
     }
     BackHandler(enabled = !state.sending) { leave() }
+    val canSend = !state.sending && !state.loading
 
     Scaffold(
         modifier = modifier,
@@ -126,8 +134,19 @@ fun ComposeScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = vm::send, enabled = !state.sending && !state.loading) {
-                        Text(stringResource(R.string.compose_send))
+                    IconButton(onClick = { attachLauncher.launch(arrayOf("*/*")) }) {
+                        Icon(Icons.Rounded.AttachFile, contentDescription = stringResource(R.string.compose_attach))
+                    }
+                    IconButton(onClick = vm::send, enabled = canSend) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.Send,
+                            contentDescription = stringResource(R.string.compose_send),
+                            tint = if (canSend) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            },
+                        )
                     }
                     Box {
                         IconButton(onClick = { moreMenu = true }) {
@@ -152,13 +171,10 @@ fun ComposeScreen(
                 .padding(padding)
                 .imePadding()
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
             if (state.sending) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
-                Text(stringResource(R.string.compose_sending), style = MaterialTheme.typography.bodySmall)
             }
             state.error?.let { error ->
                 val text = when (error) {
@@ -169,16 +185,34 @@ fun ComposeScreen(
                         stringResource(R.string.compose_error_send, stringResource(it.messageRes()))
                     } ?: stringResource(R.string.compose_error_no_account)
                 }
-                Text(text, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.compose_from), style = MaterialTheme.typography.labelLarge)
-                Box {
+            // From
+            val canSwitch = state.accounts.size > 1
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp)
+                    .clickable(enabled = canSwitch) { fromMenu = true }
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FieldLabel(R.string.compose_from)
+                Box(Modifier.weight(1f)) {
                     val selected = state.accounts.firstOrNull { it.id == state.fromId }
-                    TextButton(onClick = { fromMenu = true }, enabled = state.accounts.size > 1) {
-                        Text(selected?.emailAddress.orEmpty())
-                    }
+                    Text(
+                        selected?.emailAddress.orEmpty(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     DropdownMenu(expanded = fromMenu, onDismissRequest = { fromMenu = false }) {
                         state.accounts.forEach { account ->
                             DropdownMenuItem(
@@ -191,52 +225,103 @@ fun ComposeScreen(
                         }
                     }
                 }
+                if (canSwitch) {
+                    Icon(
+                        Icons.Rounded.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
+            FieldDivider()
 
-            RecipientField(R.string.compose_to, state.to, vm::onTo, onFocus = { focusField(RecipientKind.TO) }) {
+            RecipientRow(R.string.compose_to, state.to, vm::onTo, onFocus = { focusField(RecipientKind.TO) }) {
                 if (!state.showCcBcc) {
-                    TextButton(onClick = vm::showCcBcc) { Text(stringResource(R.string.compose_show_cc)) }
+                    Text(
+                        stringResource(R.string.compose_show_cc),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable(onClick = vm::showCcBcc)
+                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                    )
                 }
             }
             if (state.showCcBcc) {
-                RecipientField(R.string.compose_cc, state.cc, vm::onCc, onFocus = { focusField(RecipientKind.CC) })
-                RecipientField(R.string.compose_bcc, state.bcc, vm::onBcc, onFocus = { focusField(RecipientKind.BCC) })
+                RecipientRow(R.string.compose_cc, state.cc, vm::onCc, onFocus = { focusField(RecipientKind.CC) })
+                RecipientRow(R.string.compose_bcc, state.bcc, vm::onBcc, onFocus = { focusField(RecipientKind.BCC) })
             }
             SuggestionPanel(state.suggestions, vm::pickSuggestion)
 
-            OutlinedTextField(
-                value = state.subject,
-                onValueChange = vm::onSubject,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.compose_subject)) },
-                singleLine = true,
-            )
+            // Subject
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FlatInput(
+                    value = state.subject,
+                    onChange = vm::onSubject,
+                    modifier = Modifier.weight(1f),
+                    placeholder = stringResource(R.string.compose_subject),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                )
+            }
+            FieldDivider()
 
-            if (state.attachments.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    state.attachments.forEach { attachment ->
-                        AssistChip(
-                            onClick = { vm.removeAttachment(attachment) },
-                            label = {
-                                Text(stringResource(R.string.compose_remove_attachment, attachment.name), maxLines = 1)
-                            },
+            // Attachments
+            state.attachments.forEach { attachment ->
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.AttachFile,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        attachment.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 12.dp),
+                    )
+                    IconButton(onClick = { vm.removeAttachment(attachment) }) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.compose_remove_attachment, attachment.name),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
-            TextButton(onClick = { attachLauncher.launch(arrayOf("*/*")) }) {
-                Text(stringResource(R.string.compose_attach))
-            }
+            if (state.attachments.isNotEmpty()) FieldDivider()
 
-            OutlinedTextField(
+            // Body: no box, the page itself is the writing surface.
+            BasicTextField(
                 value = body,
                 onValueChange = {
                     body = it
                     vm.onBody(it.text)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(stringResource(R.string.compose_body_hint)) },
-                minLines = 10,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                minLines = 12,
+                decorationBox = { inner ->
+                    Box {
+                        if (body.text.isEmpty()) {
+                            Text(
+                                stringResource(R.string.compose_body_hint),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        }
+                        inner()
+                    }
+                },
             )
         }
     }
@@ -261,47 +346,100 @@ fun ComposeScreen(
 }
 
 @Composable
-private fun RecipientField(
+private fun FieldDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+}
+
+@Composable
+private fun FieldLabel(labelRes: Int) {
+    Text(
+        stringResource(labelRes),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        modifier = Modifier.width(72.dp),
+    )
+}
+
+/** A borderless single field: just text on the page. */
+@Composable
+private fun FlatInput(
+    value: String,
+    onChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onChange,
+        modifier = modifier,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = keyboardOptions,
+        decorationBox = { inner ->
+            Box(Modifier.padding(vertical = 12.dp)) {
+                if (value.isEmpty() && placeholder != null) {
+                    Text(
+                        placeholder,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    )
+                }
+                inner()
+            }
+        },
+    )
+}
+
+@Composable
+private fun RecipientRow(
     labelRes: Int,
     value: String,
     onChange: (String) -> Unit,
     onFocus: () -> Unit = {},
     trailing: @Composable () -> Unit = {},
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onChange,
-        modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFocus() },
-        label = { Text(stringResource(labelRes)) },
-        trailingIcon = trailing,
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.None,
-            autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Email,
-        ),
-    )
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FieldLabel(labelRes)
+        FlatInput(
+            value = value,
+            onChange = onChange,
+            modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFocus() },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Email,
+            ),
+        )
+        trailing()
+    }
+    FieldDivider()
 }
 
 @Composable
 private fun SuggestionPanel(suggestions: List<Suggestion>, onPick: (Suggestion) -> Unit) {
     if (suggestions.isEmpty()) return
-    Surface(shape = MaterialTheme.shapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-        Column {
-            suggestions.forEach { s ->
-                Column(
-                    Modifier.fillMaxWidth().clickable { onPick(s) }.padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    Text(s.name ?: s.address, style = MaterialTheme.typography.bodyMedium)
-                    if (s.name != null) {
-                        Text(
-                            s.address,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+    Column(Modifier.fillMaxWidth()) {
+        suggestions.forEach { s ->
+            Column(
+                Modifier.fillMaxWidth().clickable { onPick(s) }.padding(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                Text(s.name ?: s.address, style = MaterialTheme.typography.bodyMedium)
+                if (s.name != null) {
+                    Text(
+                        s.address,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
+            FieldDivider()
         }
     }
 }
