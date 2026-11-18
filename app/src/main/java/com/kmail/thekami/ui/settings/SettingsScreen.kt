@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -86,6 +87,7 @@ private sealed interface SettingsDialog {
     data object DisableLock : SettingsDialog
     data object Recovery : SettingsDialog
     data class Remove(val account: Account) : SettingsDialog
+    data class Transfer(val account: Account) : SettingsDialog
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,7 +184,7 @@ fun SettingsScreen(
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 when (key) {
                     "detail" -> if (detail != null) {
-                        AccountDetailPage(detail) { dialogError = null; dialog = SettingsDialog.Remove(detail) }
+                        AccountDetailPage(detail, onTransfer = { dialog = SettingsDialog.Transfer(detail) }) { dialogError = null; dialog = SettingsDialog.Remove(detail) }
                     }
 
                     SettingsPage.Accounts.name -> {
@@ -468,6 +470,7 @@ fun SettingsScreen(
             onSave = { q1, a1, q2, a2 -> vm.setRecovery(q1, a1, q2, a2) },
             onDismiss = { dialog = null },
         )
+        is SettingsDialog.Transfer -> TransferExportDialog(account = d.account, onDismiss = { dialog = null })
         null -> Unit
     }
 }
@@ -538,7 +541,7 @@ private fun AccountRow(account: Account, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AccountDetailPage(account: Account, onRemove: () -> Unit) {
+private fun AccountDetailPage(account: Account, onTransfer: () -> Unit, onRemove: () -> Unit) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.padding(top = 32.dp)) { Avatar(account.emailAddress, 72.dp) }
         Text(
@@ -548,6 +551,8 @@ private fun AccountDetailPage(account: Account, onRemove: () -> Unit) {
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
         )
         HorizontalDivider()
+        NavRow(Icons.Rounded.QrCode2, stringResource(R.string.transfer_title), stringResource(R.string.transfer_row_subtitle), onTransfer)
+        NavDivider()
         Row(
             Modifier.fillMaxWidth().clickable(onClick = onRemove).padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,

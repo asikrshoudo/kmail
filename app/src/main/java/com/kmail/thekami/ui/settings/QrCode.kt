@@ -22,7 +22,7 @@ internal class QrMatrix(val size: Int, private val cells: BooleanArray) {
 /** @return null if [text] does not fit into a QR code. */
 internal fun buildQr(text: String): QrMatrix? = try {
     val hints = mapOf(
-        EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
+        EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
         EncodeHintType.MARGIN to 0,
     )
     val bits = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 0, 0, hints)
