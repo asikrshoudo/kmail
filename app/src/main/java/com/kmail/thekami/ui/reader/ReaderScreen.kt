@@ -13,13 +13,25 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -46,30 +58,29 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Forward
 import androidx.compose.material.icons.automirrored.rounded.Reply
 import androidx.compose.material.icons.automirrored.rounded.ReplyAll
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderZip
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.MarkEmailUnread
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -87,6 +98,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -103,7 +115,6 @@ import com.kmail.thekami.R
 import com.kmail.thekami.domain.mail.MailError
 import com.kmail.thekami.mail.Mailbox
 import com.kmail.thekami.mail.ParsedAttachment
-import com.kmail.thekami.mail.ParsedMessage
 import com.kmail.thekami.ui.components.ErrorState
 import com.kmail.thekami.ui.home.AvatarColors
 import com.kmail.thekami.ui.home.actionNoticeText
@@ -236,59 +247,60 @@ fun ReaderScreen(
                     onRetry = vm::load,
                 )
                 state.thread.isEmpty() -> ReaderSkeleton()
-                else -> Column(
-                    Modifier
-                        .fillMaxSize()
-                        .horizontalSwipeNavigation(
-                            swipeThreshold,
-                            onNext = { state.olderId?.let(onNavigate) },
-                            onPrevious = { state.newerId?.let(onNavigate) },
-                        )
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    state.notice?.let { notice ->
-                        actionNoticeText(notice)?.let {
-                            Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                else -> FadeIn {
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .horizontalSwipeNavigation(
+                                swipeThreshold,
+                                onNext = { state.olderId?.let(onNavigate) },
+                                onPrevious = { state.newerId?.let(onNavigate) },
+                            )
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        state.notice?.let { notice ->
+                            actionNoticeText(notice)?.let {
                                 Text(
                                     it,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                 )
                             }
                         }
-                    }
-                    Row(Modifier.padding(start = 20.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.Top) {
-                        Text(
-                            text = state.subject.ifBlank { stringResource(R.string.home_no_subject) },
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.weight(1f).padding(top = 6.dp),
-                        )
-                        IconButton(onClick = vm::toggleStar) {
-                            Icon(
-                                imageVector = if (state.starred) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                contentDescription = stringResource(R.string.home_toggle_star),
-                                tint = if (state.starred) Color(0xFFF4B400) else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    state.openedFolder?.let { folder ->
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            modifier = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 12.dp),
-                        ) {
+
+                        // Subject and where the message lives
+                        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.Top) {
                             Text(
-                                folderLabel(folder),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                text = state.subject.ifBlank { stringResource(R.string.home_no_subject) },
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.weight(1f).padding(top = 10.dp),
                             )
+                            StarButton(starred = state.starred, onClick = vm::toggleStar)
                         }
-                    }
-                    Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        state.thread.forEach { item ->
-                            ThreadCard(
+                        state.openedFolder?.let { folder ->
+                            Row(
+                                Modifier.padding(start = 16.dp, top = 0.dp, bottom = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Icon(
+                                    folderIcon(folder.role),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Text(
+                                    folderLabel(folder),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Hairline()
+
+                        state.thread.forEachIndexed { index, item ->
+                            ThreadEntry(
                                 item = item,
                                 expanded = item.id in state.expanded,
                                 body = state.bodies[item.id],
@@ -306,9 +318,10 @@ fun ReaderScreen(
                                 onLink = { pendingLink = it },
                                 onRetry = { vm.retryBody(item.id) },
                             )
+                            if (index < state.thread.lastIndex) Hairline()
                         }
+                        Spacer(Modifier.height(24.dp))
                     }
-                    Spacer(Modifier.height(24.dp))
                 }
             }
         }
@@ -361,6 +374,49 @@ fun ReaderScreen(
 }
 
 @Composable
+private fun Hairline() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+}
+
+/** The page eases in once, so opening a message feels soft instead of popping. */
+@Composable
+private fun FadeIn(content: @Composable () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(tween(260)) + slideInVertically(
+            animationSpec = tween(340, easing = FastOutSlowInEasing),
+            initialOffsetY = { it / 40 },
+        ),
+    ) { content() }
+}
+
+@Composable
+private fun StarButton(starred: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        AnimatedContent(
+            targetState = starred,
+            transitionSpec = {
+                (
+                    scaleIn(
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                        initialScale = 0.3f,
+                    ) + fadeIn(tween(120))
+                    ) togetherWith (scaleOut(tween(100)) + fadeOut(tween(100)))
+            },
+            label = "star",
+        ) { on ->
+            Icon(
+                imageVector = if (on) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                contentDescription = stringResource(R.string.home_toggle_star),
+                tint = if (on) Color(0xFFF4B400) else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
 private fun shortDate(millis: Long): String {
     if (millis <= 0) return ""
     val context = LocalContext.current
@@ -379,8 +435,9 @@ private fun toLine(to: List<Mailbox>, ownEmail: String): String {
     return stringResource(R.string.reader_to_line, names.joinToString(", "))
 }
 
+/** One message of the conversation. No card, no border: just a row that opens into the message. */
 @Composable
-private fun ThreadCard(
+private fun ThreadEntry(
     item: ThreadItem,
     expanded: Boolean,
     body: LoadedBody?,
@@ -399,177 +456,186 @@ private fun ThreadCard(
     var moreOpen by remember { mutableStateOf(false) }
     val name = if (item.isOwn) stringResource(R.string.reader_me_cap) else item.senderName.ifBlank { stringResource(R.string.home_unknown_sender) }
     val message = body?.message
+    val chevron by animateFloatAsState(
+        targetValue = if (showDetails) 180f else 0f,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "details-chevron",
+    )
 
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggle)
-                    .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = if (expanded) 6.dp else 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(start = 16.dp, end = if (expanded) 4.dp else 16.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).background(AvatarColors.colorFor(item.senderAddress.ifBlank { name })),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(AvatarColors.colorFor(item.senderAddress.ifBlank { name })),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        name.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                    )
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (!item.isRead && !expanded) FontWeight.Bold else FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (expanded) {
+                Text(
+                    name.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (!item.isRead && !expanded) FontWeight.Bold else FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (expanded) {
+                    Row(
+                        Modifier.clickable { showDetails = !showDetails },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
-                            item.senderAddress,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Row(Modifier.clickable { showDetails = !showDetails }, verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                message?.let { toLine(it.to, ownEmail) } ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
-                            )
-                            Icon(
-                                if (showDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                                contentDescription = stringResource(if (showDetails) R.string.reader_details_hide else R.string.reader_details_show),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    } else if (item.snippet.isNotBlank()) {
-                        Text(
-                            item.snippet,
+                            message?.let { toLine(it.to, ownEmail) } ?: "",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Icon(
+                            Icons.Rounded.ExpandMore,
+                            contentDescription = stringResource(if (showDetails) R.string.reader_details_hide else R.string.reader_details_show),
+                            modifier = Modifier.size(18.dp).rotate(chevron),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                }
-                Column(horizontalAlignment = Alignment.End) {
+                } else if (item.snippet.isNotBlank()) {
                     Text(
-                        shortDate(item.receivedAtMillis),
-                        style = MaterialTheme.typography.labelMedium,
+                        item.snippet,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    if (expanded) {
-                        Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            OutlinedIconButton(onClick = { onCompose("reply") }, modifier = Modifier.size(40.dp), shape = RoundedCornerShape(14.dp)) {
-                                Icon(Icons.AutoMirrored.Rounded.Reply, contentDescription = stringResource(R.string.compose_reply), modifier = Modifier.size(20.dp))
-                            }
-                            Box {
-                                OutlinedIconButton(onClick = { moreOpen = true }, modifier = Modifier.size(40.dp), shape = RoundedCornerShape(14.dp)) {
-                                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.reader_more), modifier = Modifier.size(20.dp))
-                                }
-                                DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.compose_reply_all)) },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ReplyAll, contentDescription = null) },
-                                        onClick = { moreOpen = false; onCompose("replyall") },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.compose_forward)) },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Forward, contentDescription = null) },
-                                        onClick = { moreOpen = false; onCompose("forward") },
-                                    )
-                                }
-                            }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    shortDate(item.receivedAtMillis),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (expanded) {
+                    IconButton(onClick = { onCompose("reply") }, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.Reply,
+                            contentDescription = stringResource(R.string.compose_reply),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Box {
+                        IconButton(onClick = { moreOpen = true }, modifier = Modifier.size(40.dp)) {
+                            Icon(
+                                Icons.Rounded.MoreVert,
+                                contentDescription = stringResource(R.string.reader_more),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                        DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.compose_reply_all)) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ReplyAll, contentDescription = null) },
+                                onClick = { moreOpen = false; onCompose("replyall") },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.compose_forward)) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Forward, contentDescription = null) },
+                                onClick = { moreOpen = false; onCompose("forward") },
+                            )
                         }
                     }
                 }
             }
+        }
 
-            AnimatedVisibility(expanded) {
-                Column(Modifier.fillMaxWidth()) {
-                    if (showDetails && message != null) {
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth(),
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(tween(300, easing = FastOutSlowInEasing)) + fadeIn(tween(240)),
+            exit = shrinkVertically(tween(240, easing = FastOutSlowInEasing)) + fadeOut(tween(140)),
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                if (message != null) {
+                    AnimatedVisibility(
+                        visible = showDetails,
+                        enter = expandVertically(tween(220)) + fadeIn(tween(200)),
+                        exit = shrinkVertically(tween(180)) + fadeOut(tween(120)),
+                    ) {
+                        Column(
+                            Modifier.padding(start = 68.dp, end = 16.dp, bottom = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                DetailLine(stringResource(R.string.reader_label_from), message.from?.display())
-                                DetailLine(stringResource(R.string.reader_label_to), message.to.joinToString(", ") { it.display() }.ifEmpty { null })
-                                DetailLine(stringResource(R.string.reader_label_cc), message.cc.joinToString(", ") { it.display() }.ifEmpty { null })
-                                DetailLine(
-                                    stringResource(R.string.reader_label_date),
-                                    message.dateMillis?.let {
-                                        DateUtils.formatDateTime(
-                                            LocalContext.current, it,
-                                            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_YEAR,
-                                        )
-                                    },
-                                )
-                                DetailLine(stringResource(R.string.reader_label_id), message.messageId)
-                            }
+                            DetailLine(stringResource(R.string.reader_label_from), message.from?.display())
+                            DetailLine(stringResource(R.string.reader_label_to), message.to.joinToString(", ") { it.display() }.ifEmpty { null })
+                            DetailLine(stringResource(R.string.reader_label_cc), message.cc.joinToString(", ") { it.display() }.ifEmpty { null })
+                            DetailLine(
+                                stringResource(R.string.reader_label_date),
+                                message.dateMillis?.let {
+                                    DateUtils.formatDateTime(
+                                        LocalContext.current, it,
+                                        DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_YEAR,
+                                    )
+                                },
+                            )
+                            DetailLine(stringResource(R.string.reader_label_id), message.messageId)
                         }
                     }
-                    message?.unsubscribe?.let { link ->
-                        TextButton(onClick = { onLink(link) }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                            Text(stringResource(R.string.reader_unsubscribe))
-                        }
+                }
+                message?.unsubscribe?.let { link ->
+                    TextButton(onClick = { onLink(link) }, modifier = Modifier.padding(horizontal = 8.dp)) {
+                        Text(stringResource(R.string.reader_unsubscribe))
                     }
-                    if (body != null && body.blockedRemote > 0 && !body.allowRemote) {
-                        Surface(
-                            onClick = onShowPictures,
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).fillMaxWidth(),
-                        ) {
-                            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Icon(Icons.Rounded.Image, contentDescription = null)
-                                Text(stringResource(R.string.reader_show_pictures), style = MaterialTheme.typography.bodyLarge)
-                            }
-                        }
-                    }
-                    if (message != null && message.attachments.isNotEmpty()) {
-                        Row(
-                            Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            message.attachments.forEach { AttachmentCard(it) { onSave(it) } }
-                        }
-                    }
-                    when {
-                        body != null -> EmailWebView(
-                            html = body.html,
-                            allowRemote = body.allowRemote,
-                            dark = dark,
-                            onLink = onLink,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp).padding(bottom = 6.dp),
+                }
+                if (body != null && body.blockedRemote > 0 && !body.allowRemote) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable(onClick = onShowPictures).padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(Icons.Rounded.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Text(
+                            stringResource(R.string.reader_show_pictures),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
                         )
-                        failed != null -> Column(Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.reader_body_failed), color = MaterialTheme.colorScheme.error)
-                            TextButton(onClick = onRetry) { Text(stringResource(R.string.connecting_retry)) }
-                        }
-                        loading -> BodySkeleton()
                     }
+                }
+                if (message != null && message.attachments.isNotEmpty()) {
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        message.attachments.forEach { AttachmentCard(it) { onSave(it) } }
+                    }
+                }
+                when {
+                    body != null -> EmailWebView(
+                        html = body.html,
+                        allowRemote = body.allowRemote,
+                        dark = dark,
+                        onLink = onLink,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp).padding(bottom = 6.dp),
+                    )
+                    failed != null -> Column(Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.reader_body_failed), color = MaterialTheme.colorScheme.error)
+                        TextButton(onClick = onRetry) { Text(stringResource(R.string.connecting_retry)) }
+                    }
+                    loading -> BodySkeleton()
                 }
             }
         }
     }
 }
+
 @Composable
 private fun AttachmentCard(attachment: ParsedAttachment, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -580,7 +646,7 @@ private fun AttachmentCard(attachment: ParsedAttachment, onClick: () -> Unit) {
         AttachmentKind.ARCHIVE -> Icons.Rounded.FolderZip
         AttachmentKind.OTHER -> Icons.Rounded.InsertDriveFile
     }
-    Surface(onClick = onClick, shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    Surface(onClick = onClick, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(
             Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -630,26 +696,29 @@ private fun ReplyBar(
     onForward: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.navigationBarsPadding()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilledTonalButton(onClick = onReply, modifier = Modifier.weight(1f)) {
-                Icon(Icons.AutoMirrored.Rounded.Reply, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.compose_reply), maxLines = 1)
-            }
-            if (showReplyAll) {
-                FilledTonalButton(onClick = onReplyAll, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.AutoMirrored.Rounded.ReplyAll, contentDescription = null, modifier = Modifier.size(20.dp))
+        Column {
+            Hairline()
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilledTonalButton(onClick = onReply, shape = CircleShape, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.AutoMirrored.Rounded.Reply, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.compose_reply_all), maxLines = 1)
+                    Text(stringResource(R.string.compose_reply), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-            }
-            FilledTonalButton(onClick = onForward, modifier = Modifier.weight(1f)) {
-                Icon(Icons.AutoMirrored.Rounded.Forward, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.compose_forward), maxLines = 1)
+                if (showReplyAll) {
+                    FilledTonalButton(onClick = onReplyAll, shape = CircleShape, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.AutoMirrored.Rounded.ReplyAll, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.compose_reply_all), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                FilledTonalButton(onClick = onForward, shape = CircleShape, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.AutoMirrored.Rounded.Forward, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.compose_forward), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
     }
@@ -677,13 +746,24 @@ private fun BodySkeleton() {
     }
 }
 
-/** Shown while the thread is being found. */
+/** Shown while the thread is being found: the same shape as the real page. */
 @Composable
 private fun ReaderSkeleton() {
     val tint = skeletonTint()
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(Modifier.height(24.dp).fillMaxWidth(0.7f).clip(RoundedCornerShape(8.dp)).background(tint))
-        Box(Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(20.dp)).background(tint))
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Box(Modifier.height(26.dp).fillMaxWidth(0.7f).clip(RoundedCornerShape(8.dp)).background(tint))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(tint))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.height(12.dp).width(140.dp).clip(RoundedCornerShape(6.dp)).background(tint))
+                Box(Modifier.height(10.dp).width(90.dp).clip(RoundedCornerShape(5.dp)).background(tint))
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            repeat(5) { i ->
+                Box(Modifier.height(12.dp).fillMaxWidth(if (i == 4) 0.55f else 1f).clip(RoundedCornerShape(6.dp)).background(tint))
+            }
+        }
     }
 }
 
