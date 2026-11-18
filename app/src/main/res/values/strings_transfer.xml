@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_title">Transfer to another device</string>
+    <string name="transfer_row_subtitle">Move this account with a QR code or an encrypted file</string>
+    <string name="transfer_intro">Everything, including your passwords, is encrypted with a passphrase you choose. You need the same passphrase on the other device.</string>
+    <string name="transfer_passphrase">Passphrase</string>
+    <string name="transfer_passphrase_repeat">Repeat passphrase</string>
+    <string name="transfer_passphrase_short">Use at least 10 characters</string>
+    <string name="transfer_passphrase_mismatch">Passphrases do not match</string>
+    <string name="transfer_continue">Continue</string>
+    <string name="transfer_working">Preparing...</string>
+    <string name="transfer_failed">Could not prepare the transfer. Try again.</string>
+    <string name="transfer_show_qr">Show QR code</string>
+    <string name="transfer_save_file">Save as file</string>
+    <string name="transfer_qr_note">Scan this with Kmail on the other device, then close it.</string>
+    <string name="transfer_qr_too_big">This account is too large for a QR code. Save it as a file instead.</string>
+    <string name="transfer_saved">Saved</string>
+    <string name="transfer_save_failed">Could not save the file</string>
+    <string name="transfer_done">Done</string>
+</resources>

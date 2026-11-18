@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.jakarta.mail.api)
     implementation(libs.angus.mail)
     implementation(libs.angus.activation)
+    implementation(libs.zxing.core)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
 

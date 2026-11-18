@@ -19,6 +19,7 @@ lifecycle = "2.11.0"
 work = "2.10.0"
 biometric = "1.1.0"
 androidxHilt = "1.4.0"
+zxing = "3.5.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +48,7 @@ androidx-hilt-lifecycle-viewmodel-compose = { group = "androidx.hilt", name = "h
 jakarta-mail-api = { group = "jakarta.mail", name = "jakarta.mail-api", version.ref = "jakartaMailApi" }
 angus-activation = { group = "org.eclipse.angus", name = "angus-activation", version.ref = "angusActivation" }
 angus-mail = { group = "org.eclipse.angus", name = "angus-mail", version.ref = "angusMail" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
