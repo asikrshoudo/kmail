@@ -25,6 +25,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.kmail.thekami.R
+import com.kmail.thekami.data.transfer.TransferText
+import com.kmail.thekami.ui.setup.ScanScreen
+import com.kmail.thekami.ui.setup.TransferImportHost
+import com.kmail.thekami.ui.setup.TransferImportViewModel
 import com.kmail.thekami.ui.components.LoadingState
 import com.kmail.thekami.ui.home.HomeScreen
 import com.kmail.thekami.ui.drafts.DraftsScreen
@@ -51,6 +55,7 @@ fun KmailNavHost(
     val appStart: AppStartViewModel = hiltViewModel()
     // One ViewModel for the whole setup flow, owned at the NavHost level.
     val vm: SetupViewModel = hiltViewModel()
+    val importVm: TransferImportViewModel = hiltViewModel()
 
     val start by appStart.startRoute.collectAsStateWithLifecycle()
     val startRoute = start ?: run {
@@ -72,11 +77,34 @@ fun KmailNavHost(
 
         composable(Routes.CREDENTIALS) {
             val state by vm.credentials.collectAsStateWithLifecycle()
+            val context = LocalContext.current
+            val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) importVm.loadFile(context.contentResolver, uri)
+            }
             CredentialsScreen(
                 state = state,
                 onEmailChange = vm::onEmailChange,
                 onPasswordChange = vm::onPasswordChange,
                 onContinue = { if (vm.submitCredentials()) navController.navigate(Routes.INCOMING) },
+                onScanQr = { navController.navigate(Routes.SCAN) },
+                onImportFile = { pickFile.launch(arrayOf("*/*")) },
+            )
+            TransferImportHost(
+                importVm = importVm,
+                setupVm = vm,
+                onReady = { navController.navigate(Routes.CONNECTING) },
+            )
+        }
+
+        composable(Routes.SCAN) {
+            ScanScreen(
+                onScanned = { text ->
+                    val bytes = TransferText.decode(text)
+                    val accepted = bytes != null && importVm.offer(bytes)
+                    if (accepted) navController.popBackStack()
+                    accepted
+                },
+                onBack = { navController.popBackStack() },
             )
         }
 

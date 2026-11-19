@@ -4,6 +4,7 @@ object Routes {
     const val HOME = "home"
     const val WELCOME = "welcome"
     const val CREDENTIALS = "credentials"
+    const val SCAN = "scan"
     const val INCOMING = "incoming"
     const val OUTGOING = "outgoing"
     const val CONNECTING = "connecting"

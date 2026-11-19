@@ -45,6 +45,8 @@ fun CredentialsScreen(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onContinue: () -> Unit,
+    onScanQr: () -> Unit,
+    onImportFile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showHelp by rememberSaveable { mutableStateOf(false) }
@@ -141,20 +143,12 @@ fun CredentialsScreen(
             Text(stringResource(R.string.credentials_continue))
         }
 
-        // Disabled until the encrypted transfer design is approved (Phase 5).
-        OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onScanQr, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.credentials_scan_qr))
         }
-        OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onImportFile, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.credentials_import_file))
         }
-        Text(
-            text = stringResource(R.string.credentials_transfer_unavailable),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 
     if (showHelp) {
