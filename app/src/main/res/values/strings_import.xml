@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_title">Import account</string>
+    <string name="import_intro">Enter the passphrase you chose when you exported this account.</string>
+    <string name="import_unlock">Import</string>
+    <string name="import_wrong">Wrong passphrase, or the code or file is damaged.</string>
+    <string name="import_unsupported">This was made by a newer version of Kmail. Update the app and try again.</string>
+    <string name="import_rejected_title">Not a Kmail transfer</string>
+    <string name="import_rejected_body">This file or code is not a Kmail account transfer.</string>
+    <string name="import_ok">OK</string>
+    <string name="scan_title">Scan QR code</string>
+    <string name="scan_hint">Point the camera at the QR code shown on your other device.</string>
+    <string name="scan_permission">Kmail needs the camera to scan the QR code. Nothing you scan leaves your phone.</string>
+    <string name="scan_allow">Allow camera</string>
+    <string name="scan_back">Back</string>
+</resources>
