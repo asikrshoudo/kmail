@@ -38,7 +38,7 @@ class TransferExportViewModel @Inject constructor(
         viewModelScope.launch {
             val chars = passphrase.toCharArray()
             try {
-                _state.value = when (val result = exporter.export(accountId, chars)) {
+                _state.value = when (val result = exporter.export(listOf(accountId), chars)) {
                     is ExportResult.Ready -> ExportUiState.Ready(result.data)
                     else -> ExportUiState.Failed
                 }

@@ -4,6 +4,7 @@ import com.kmail.thekami.domain.model.AccountSettings
 import com.kmail.thekami.domain.model.AuthMethod
 import com.kmail.thekami.domain.model.ConnectionSecurity
 import com.kmail.thekami.domain.model.ServerEndpoint
+import com.kmail.thekami.domain.transfer.TransferAccount
 import com.kmail.thekami.domain.transfer.TransferPackage
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -15,32 +16,51 @@ class TransferCodecTest {
     private val codec = TransferCodec(iterations = 1_000)
     private val passphrase = "correct horse battery".toCharArray()
 
-    private fun sample() = TransferPackage(
-        createdAtMillis = 1_700_000_000_000L,
-        emailAddress = "user@example.com",
-        displayName = "User Name",
-        colorArgb = 0xFF6750A4.toInt(),
+    private fun account(n: Int) = TransferAccount(
+        emailAddress = "user$n@example.com",
+        displayName = "User $n",
+        colorArgb = 0xFF6750A4.toInt() + n,
         settings = AccountSettings(
-            imap = ServerEndpoint("imap.example.com", 993, ConnectionSecurity.SSL_TLS, AuthMethod.NORMAL_PASSWORD, "user@example.com"),
-            smtp = ServerEndpoint("smtp.example.com", 587, ConnectionSecurity.STARTTLS, AuthMethod.NORMAL_PASSWORD, "user@example.com"),
+            imap = ServerEndpoint("imap$n.example.com", 993, ConnectionSecurity.SSL_TLS, AuthMethod.NORMAL_PASSWORD, "user$n@example.com"),
+            smtp = ServerEndpoint("smtp$n.example.com", 587, ConnectionSecurity.STARTTLS, AuthMethod.NORMAL_PASSWORD, "user$n@example.com"),
         ),
-        imapPassword = "imap-p\u00e4ss".toCharArray(),
-        smtpPassword = "smtp-\u09ac\u09be\u0982".toCharArray(),
+        imapPassword = "imap-p\u00e4ss$n".toCharArray(),
+        smtpPassword = "smtp-\u09ac\u09be\u0982$n".toCharArray(),
     )
 
+    private fun sample(count: Int = 2) = TransferPackage(1_700_000_000_000L, (1..count).map { account(it) })
+
+    private fun assertSame(expected: TransferAccount, actual: TransferAccount) {
+        assertEquals(expected.emailAddress, actual.emailAddress)
+        assertEquals(expected.displayName, actual.displayName)
+        assertEquals(expected.colorArgb, actual.colorArgb)
+        assertEquals(expected.settings, actual.settings)
+        assertArrayEquals(expected.imapPassword, actual.imapPassword)
+        assertArrayEquals(expected.smtpPassword, actual.smtpPassword)
+    }
+
     @Test
-    fun roundTripKeepsEverything() {
-        val original = sample()
+    fun roundTripKeepsEveryAccount() {
+        val original = sample(3)
         val result = codec.decode(codec.encode(original, passphrase), passphrase)
         assertTrue(result is TransferDecodeResult.Ok)
         val got = (result as TransferDecodeResult.Ok).data
         assertEquals(original.createdAtMillis, got.createdAtMillis)
-        assertEquals(original.emailAddress, got.emailAddress)
-        assertEquals(original.displayName, got.displayName)
-        assertEquals(original.colorArgb, got.colorArgb)
-        assertEquals(original.settings, got.settings)
-        assertArrayEquals(original.imapPassword, got.imapPassword)
-        assertArrayEquals(original.smtpPassword, got.smtpPassword)
+        assertEquals(3, got.accounts.size)
+        original.accounts.indices.forEach { assertSame(original.accounts[it], got.accounts[it]) }
+    }
+
+    @Test
+    fun singleAccountRoundTrips() {
+        val original = sample(1)
+        val got = (codec.decode(codec.encode(original, passphrase), passphrase) as TransferDecodeResult.Ok).data
+        assertEquals(1, got.accounts.size)
+        assertSame(original.accounts[0], got.accounts[0])
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun emptyPackageIsRejected() {
+        TransferPackage(0L, emptyList())
     }
 
     @Test

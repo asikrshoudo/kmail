@@ -10,14 +10,12 @@ import com.kmail.thekami.domain.model.AccountSettings
 import com.kmail.thekami.domain.model.AddAccountResult
 import com.kmail.thekami.domain.model.ConnectionSecurity
 import com.kmail.thekami.domain.model.NewAccount
-import com.kmail.thekami.domain.model.ServerEndpoint
 import com.kmail.thekami.domain.model.ProviderPresets
 import com.kmail.thekami.domain.model.ServerForm
 import com.kmail.thekami.domain.model.ServerFormError
 import com.kmail.thekami.domain.model.ServerFormResult
 import com.kmail.thekami.domain.model.SuggestionNote
 import com.kmail.thekami.domain.model.normalizeEmail
-import com.kmail.thekami.domain.transfer.TransferPackage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -96,25 +94,6 @@ class SetupViewModel @Inject constructor(
     val connectState: StateFlow<ConnectState> = _connectState.asStateFlow()
 
     private var connectJob: Job? = null
-
-    private var importedName: String? = null
-    private var importedColor: Int? = null
-
-    /** Fills every form from an imported transfer, so the normal connection test can run. */
-    fun loadTransfer(pkg: TransferPackage) {
-        importedName = pkg.displayName
-        importedColor = pkg.colorArgb
-        _credentials.value = CredentialsUiState(email = pkg.emailAddress, password = String(pkg.imapPassword))
-        _incoming.value = pkg.settings.imap.toUiState(String(pkg.imapPassword))
-        _outgoing.value = pkg.settings.smtp.toUiState(String(pkg.smtpPassword))
-        _note.value = null
-        _connectState.value = ConnectState.Idle
-    }
-
-    private fun ServerEndpoint.toUiState(password: String) = ServerUiState(
-        form = ServerForm(host = host, port = port.toString(), security = security, username = username),
-        password = password,
-    )
 
     // ---- credentials ----
 
@@ -256,8 +235,8 @@ class SetupViewModel @Inject constructor(
             _connectState.value = ConnectState.Testing(ConnectStage.SAVING)
             val draft = NewAccount(
                 emailAddress = email,
-                displayName = importedName ?: "",
-                colorArgb = importedColor ?: ACCOUNT_COLORS[(email.hashCode() and Int.MAX_VALUE) % ACCOUNT_COLORS.size],
+                displayName = "",
+                colorArgb = ACCOUNT_COLORS[(email.hashCode() and Int.MAX_VALUE) % ACCOUNT_COLORS.size],
                 settings = AccountSettings(imap, smtp),
                 imapPassword = imapPassword,
                 smtpPassword = smtpPassword,
@@ -281,8 +260,6 @@ class SetupViewModel @Inject constructor(
         _credentials.value = CredentialsUiState()
         _incoming.value = ServerUiState()
         _outgoing.value = ServerUiState()
-        importedName = null
-        importedColor = null
         _note.value = null
     }
 

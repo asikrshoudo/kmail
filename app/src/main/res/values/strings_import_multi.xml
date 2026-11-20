@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_show">Show passphrase</string>
+    <string name="transfer_hide">Hide passphrase</string>
+    <string name="import_progress">Adding %1$d of %2$d: %3$s</string>
+    <string name="import_result_title">Import finished</string>
+    <string name="import_added">Added</string>
+    <string name="import_exists">Already added</string>
+    <string name="import_incoming_failed">Could not connect to the incoming server</string>
+    <string name="import_outgoing_failed">Could not connect to the outgoing server</string>
+    <string name="import_failed">Could not save this account</string>
+    <string name="import_open_inbox">Open inbox</string>
+    <string name="import_close">Close</string>
+</resources>

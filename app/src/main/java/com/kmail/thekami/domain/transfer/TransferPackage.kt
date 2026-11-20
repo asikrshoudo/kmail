@@ -3,12 +3,8 @@ package com.kmail.thekami.domain.transfer
 import com.kmail.thekami.domain.model.AccountSettings
 import com.kmail.thekami.domain.model.NewAccount
 
-/**
- * Everything needed to sign in on another device. Holds both mailbox passwords,
- * so callers must call [wipe] as soon as they are done with it.
- */
-class TransferPackage(
-    val createdAtMillis: Long,
+/** One mailbox inside a transfer. It holds both passwords, so call [wipe] when you are done. */
+class TransferAccount(
     val emailAddress: String,
     val displayName: String,
     val colorArgb: Int,
@@ -29,5 +25,23 @@ class TransferPackage(
     fun wipe() {
         imapPassword.fill('\u0000')
         smtpPassword.fill('\u0000')
+    }
+}
+
+/** Everything needed to sign in to one or more accounts on another device. */
+class TransferPackage(
+    val createdAtMillis: Long,
+    val accounts: List<TransferAccount>,
+) {
+    init {
+        require(accounts.size in 1..MAX_ACCOUNTS) { "invalid account count" }
+    }
+
+    fun wipe() {
+        accounts.forEach { it.wipe() }
+    }
+
+    companion object {
+        const val MAX_ACCOUNTS = 32
     }
 }

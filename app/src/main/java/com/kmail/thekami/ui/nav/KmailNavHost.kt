@@ -91,8 +91,7 @@ fun KmailNavHost(
             )
             TransferImportHost(
                 importVm = importVm,
-                setupVm = vm,
-                onReady = { navController.navigate(Routes.CONNECTING) },
+                onOpenInbox = { navController.navigate(Routes.HOME) { popUpTo(navController.graph.id) { inclusive = true } } },
             )
         }
 

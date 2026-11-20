@@ -4,6 +4,7 @@ import com.kmail.thekami.domain.model.AccountSettings
 import com.kmail.thekami.domain.model.AuthMethod
 import com.kmail.thekami.domain.model.ConnectionSecurity
 import com.kmail.thekami.domain.model.ServerEndpoint
+import com.kmail.thekami.domain.transfer.TransferAccount
 import com.kmail.thekami.domain.transfer.TransferPackage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -15,7 +16,7 @@ import java.nio.CharBuffer
 
 /** Plain binary layout of a [TransferPackage]. It is only ever stored or sent encrypted. */
 internal object TransferSerializer {
-    const val VERSION = 1
+    const val VERSION = 2
     private const val MAX_FIELD = 4096
 
     fun write(pkg: TransferPackage): ByteArray {
@@ -23,13 +24,8 @@ internal object TransferSerializer {
         DataOutputStream(bytes).use { out ->
             out.writeByte(VERSION)
             out.writeLong(pkg.createdAtMillis)
-            out.writeText(pkg.emailAddress)
-            out.writeText(pkg.displayName)
-            out.writeInt(pkg.colorArgb)
-            out.writeEndpoint(pkg.settings.imap)
-            out.writeEndpoint(pkg.settings.smtp)
-            out.writeSecret(pkg.imapPassword)
-            out.writeSecret(pkg.smtpPassword)
+            out.writeByte(pkg.accounts.size)
+            pkg.accounts.forEach { out.writeAccount(it) }
         }
         return bytes.toByteArray()
     }
@@ -39,15 +35,38 @@ internal object TransferSerializer {
         DataInputStream(ByteArrayInputStream(plain)).use { input ->
             if (input.readUnsignedByte() != VERSION) return null
             val createdAt = input.readLong()
-            val email = input.readText()
-            val name = input.readText()
-            val color = input.readInt()
-            val imap = input.readEndpoint()
-            val smtp = input.readEndpoint()
-            val imapPassword = input.readSecret()
-            val smtpPassword = input.readSecret()
-            TransferPackage(createdAt, email, name, color, AccountSettings(imap, smtp), imapPassword, smtpPassword)
+            val count = input.readUnsignedByte()
+            if (count !in 1..TransferPackage.MAX_ACCOUNTS) throw IOException("bad account count")
+            val accounts = ArrayList<TransferAccount>(count)
+            try {
+                repeat(count) { accounts += input.readAccount() }
+            } catch (e: Exception) {
+                accounts.forEach { it.wipe() }
+                throw e
+            }
+            TransferPackage(createdAt, accounts)
         }
+
+    private fun DataOutputStream.writeAccount(account: TransferAccount) {
+        writeText(account.emailAddress)
+        writeText(account.displayName)
+        writeInt(account.colorArgb)
+        writeEndpoint(account.settings.imap)
+        writeEndpoint(account.settings.smtp)
+        writeSecret(account.imapPassword)
+        writeSecret(account.smtpPassword)
+    }
+
+    private fun DataInputStream.readAccount(): TransferAccount {
+        val email = readText()
+        val name = readText()
+        val color = readInt()
+        val imap = readEndpoint()
+        val smtp = readEndpoint()
+        val imapPassword = readSecret()
+        val smtpPassword = readSecret()
+        return TransferAccount(email, name, color, AccountSettings(imap, smtp), imapPassword, smtpPassword)
+    }
 
     private fun DataOutputStream.writeBlock(value: ByteArray) {
         writeInt(value.size)

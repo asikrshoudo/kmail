@@ -6,6 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kmail.thekami.data.transfer.TransferCodec
 import com.kmail.thekami.data.transfer.TransferDecodeResult
+import com.kmail.thekami.domain.mail.ConnectionTester
+import com.kmail.thekami.domain.mail.MailResult
+import com.kmail.thekami.domain.model.AccountCreator
+import com.kmail.thekami.domain.model.AddAccountResult
+import com.kmail.thekami.domain.transfer.TransferAccount
 import com.kmail.thekami.domain.transfer.TransferPackage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.ByteArrayOutputStream
@@ -20,17 +25,28 @@ import kotlinx.coroutines.withContext
 
 enum class ImportError { WRONG_OR_DAMAGED, UNSUPPORTED }
 
+enum class ImportOutcome { ADDED, ALREADY_EXISTS, INCOMING_FAILED, OUTGOING_FAILED, FAILED }
+
+class ImportResult(val email: String, val outcome: ImportOutcome)
+
 sealed interface ImportUiState {
     data object Idle : ImportUiState
     class AskPassphrase(val error: ImportError?) : ImportUiState
-    data object Working : ImportUiState
-    class Unlocked(val data: TransferPackage) : ImportUiState
+    data object Decrypting : ImportUiState
+    class Importing(val index: Int, val total: Int, val email: String) : ImportUiState
+    class Finished(val results: List<ImportResult>) : ImportUiState
     data object Rejected : ImportUiState
 }
 
-/** Holds the encrypted bytes of a scanned or picked transfer until the passphrase is entered. */
+/**
+ * Holds the encrypted bytes of a scanned or picked transfer until the passphrase is entered,
+ * then tests and adds every account in it, one after the other.
+ */
 @HiltViewModel
-class TransferImportViewModel @Inject constructor() : ViewModel() {
+class TransferImportViewModel @Inject constructor(
+    private val tester: ConnectionTester,
+    private val accounts: AccountCreator,
+) : ViewModel() {
     private val codec = TransferCodec()
     private var pending: ByteArray? = null
 
@@ -54,32 +70,72 @@ class TransferImportViewModel @Inject constructor() : ViewModel() {
 
     fun unlock(passphrase: String) {
         val data = pending ?: return
-        if (_state.value is ImportUiState.Working) return
-        _state.value = ImportUiState.Working
+        if (_state.value !is ImportUiState.AskPassphrase) return
+        _state.value = ImportUiState.Decrypting
         viewModelScope.launch {
             val chars = passphrase.toCharArray()
-            try {
-                val result = withContext(Dispatchers.Default) { codec.decode(data, chars) }
-                _state.value = when (result) {
-                    is TransferDecodeResult.Ok -> ImportUiState.Unlocked(result.data)
-                    TransferDecodeResult.Failed -> ImportUiState.AskPassphrase(ImportError.WRONG_OR_DAMAGED)
-                    TransferDecodeResult.Unsupported -> ImportUiState.AskPassphrase(ImportError.UNSUPPORTED)
-                }
+            val result = try {
+                withContext(Dispatchers.Default) { codec.decode(data, chars) }
             } finally {
                 chars.fill('\u0000')
+            }
+            when (result) {
+                is TransferDecodeResult.Ok -> {
+                    discardPending()
+                    runImport(result.data)
+                }
+                TransferDecodeResult.Failed -> _state.value = ImportUiState.AskPassphrase(ImportError.WRONG_OR_DAMAGED)
+                TransferDecodeResult.Unsupported -> _state.value = ImportUiState.AskPassphrase(ImportError.UNSUPPORTED)
             }
         }
     }
 
-    /** Call after an unlocked transfer has been handed over, or when the user gives up. */
+    /** Call when the user gives up, or after the results have been shown. */
     fun clear() {
-        pending?.fill(0)
-        pending = null
+        discardPending()
         _state.value = ImportUiState.Idle
     }
 
     override fun onCleared() {
-        clear()
+        discardPending()
+    }
+
+    private fun discardPending() {
+        pending?.fill(0)
+        pending = null
+    }
+
+    private suspend fun runImport(pkg: TransferPackage) {
+        val results = ArrayList<ImportResult>()
+        try {
+            pkg.accounts.forEachIndexed { index, account ->
+                _state.value = ImportUiState.Importing(index + 1, pkg.accounts.size, account.emailAddress)
+                results += ImportResult(account.emailAddress, importOne(account))
+            }
+        } finally {
+            pkg.wipe()
+        }
+        _state.value = ImportUiState.Finished(results)
+    }
+
+    private suspend fun importOne(account: TransferAccount): ImportOutcome {
+        val draft = account.toNewAccount()
+        try {
+            if (tester.testImap(account.settings.imap, draft.imapPassword) is MailResult.Failure) {
+                return ImportOutcome.INCOMING_FAILED
+            }
+            if (tester.testSmtp(account.settings.smtp, draft.smtpPassword) is MailResult.Failure) {
+                return ImportOutcome.OUTGOING_FAILED
+            }
+            return when (accounts.addAccount(draft)) {
+                is AddAccountResult.Added -> ImportOutcome.ADDED
+                AddAccountResult.AlreadyExists -> ImportOutcome.ALREADY_EXISTS
+                AddAccountResult.InvalidEmail, AddAccountResult.CredentialStorageFailed -> ImportOutcome.FAILED
+            }
+        } finally {
+            draft.imapPassword.fill('\u0000')
+            draft.smtpPassword.fill('\u0000')
+        }
     }
 
     private fun readLimited(resolver: ContentResolver, uri: Uri): ByteArray? = try {
