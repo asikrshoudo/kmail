@@ -56,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kmail.thekami.R
+import com.kmail.thekami.ui.components.LegalLinks
 import com.kmail.thekami.ui.theme.rememberReducedMotion
 
 private class Feature(val icon: ImageVector, @StringRes val title: Int, @StringRes val body: Int)
@@ -203,6 +204,7 @@ private fun WelcomeColumn(
                 OtherDeviceButton(Icons.Rounded.QrCodeScanner, R.string.welcome_scan_qr, onScanQr, Modifier.weight(1f))
                 OtherDeviceButton(Icons.Rounded.FolderOpen, R.string.welcome_import_file, onImportFile, Modifier.weight(1f))
             }
+            LegalLinks(Modifier.reveal(progress, 8))
         }
     }
 }
