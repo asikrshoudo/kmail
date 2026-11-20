@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_choose">Accounts to include</string>
+    <string name="transfer_none_selected">Select at least one account</string>
+</resources>

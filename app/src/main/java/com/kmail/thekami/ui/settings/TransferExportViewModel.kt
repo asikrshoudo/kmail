@@ -32,13 +32,13 @@ class TransferExportViewModel @Inject constructor(
 
     suspend fun verifyPin(pin: String): PinVerify = lockStore.verify(pin)
 
-    fun prepare(accountId: String, passphrase: String) {
+    fun prepare(accountIds: List<String>, passphrase: String) {
         if (_state.value is ExportUiState.Working) return
         _state.value = ExportUiState.Working
         viewModelScope.launch {
             val chars = passphrase.toCharArray()
             try {
-                _state.value = when (val result = exporter.export(listOf(accountId), chars)) {
+                _state.value = when (val result = exporter.export(accountIds, chars)) {
                     is ExportResult.Ready -> ExportUiState.Ready(result.data)
                     else -> ExportUiState.Failed
                 }

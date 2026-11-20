@@ -13,7 +13,7 @@
     <string name="transfer_show_qr">Show QR code</string>
     <string name="transfer_save_file">Save as file</string>
     <string name="transfer_qr_note">Scan this with Kmail on the other device, then close it.</string>
-    <string name="transfer_qr_too_big">This account is too large for a QR code. Save it as a file instead.</string>
+    <string name="transfer_qr_too_big">This is too large for a QR code. Save it as a file instead.</string>
     <string name="transfer_saved">Saved</string>
     <string name="transfer_save_failed">Could not save the file</string>
     <string name="transfer_done">Done</string>

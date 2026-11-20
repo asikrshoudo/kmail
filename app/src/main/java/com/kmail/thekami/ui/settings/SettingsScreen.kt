@@ -87,7 +87,7 @@ private sealed interface SettingsDialog {
     data object DisableLock : SettingsDialog
     data object Recovery : SettingsDialog
     data class Remove(val account: Account) : SettingsDialog
-    data class Transfer(val account: Account) : SettingsDialog
+    data class Transfer(val preselected: String?) : SettingsDialog
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -184,7 +184,7 @@ fun SettingsScreen(
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 when (key) {
                     "detail" -> if (detail != null) {
-                        AccountDetailPage(detail, onTransfer = { dialog = SettingsDialog.Transfer(detail) }) { dialogError = null; dialog = SettingsDialog.Remove(detail) }
+                        AccountDetailPage(detail, onTransfer = { dialog = SettingsDialog.Transfer(detail.id) }) { dialogError = null; dialog = SettingsDialog.Remove(detail) }
                     }
 
                     SettingsPage.Accounts.name -> {
@@ -207,6 +207,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
+                        NavRow(Icons.Rounded.QrCode2, stringResource(R.string.transfer_title), stringResource(R.string.transfer_row_subtitle)) { dialog = SettingsDialog.Transfer(null) }
                     }
 
                     SettingsPage.Signature.name -> {
@@ -470,7 +471,7 @@ fun SettingsScreen(
             onSave = { q1, a1, q2, a2 -> vm.setRecovery(q1, a1, q2, a2) },
             onDismiss = { dialog = null },
         )
-        is SettingsDialog.Transfer -> TransferExportDialog(account = d.account, onDismiss = { dialog = null })
+        is SettingsDialog.Transfer -> TransferExportDialog(accounts = accounts.orEmpty(), preselected = d.preselected, onDismiss = { dialog = null })
         null -> Unit
     }
 }

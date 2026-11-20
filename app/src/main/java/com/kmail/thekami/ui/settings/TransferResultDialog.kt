@@ -32,14 +32,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Shows the encrypted transfer as a QR code, or saves it as a file. */
+/** Longest text that still gives a QR code a phone camera can read comfortably. */
+private const val QR_MAX_CHARS = 900
+
+/** Shows the encrypted transfer as a QR code (when it is small enough), or saves it as a file. */
 @Composable
 internal fun TransferResultDialog(data: ByteArray, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showQr by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    val qr = remember(showQr, data) { if (showQr) buildQr(TransferText.encode(data)) else null }
+    val qrText = remember(data) { TransferText.encode(data) }
+    val qrFits = qrText.length <= QR_MAX_CHARS
+    val qr = remember(showQr, qrText) { if (showQr && qrFits) buildQr(qrText) else null }
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri ->
@@ -63,19 +68,21 @@ internal fun TransferResultDialog(data: ByteArray, onDismiss: () -> Unit) {
         text = {
             SecureWindow()
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (showQr) {
-                    if (qr != null) {
+                when {
+                    qr != null -> {
                         QrImage(qr, Modifier.fillMaxWidth())
                         Text(stringResource(R.string.transfer_qr_note), style = MaterialTheme.typography.bodyMedium)
-                    } else {
+                    }
+                    showQr || !qrFits -> {
                         Text(stringResource(R.string.transfer_qr_too_big), style = MaterialTheme.typography.bodyMedium)
                     }
-                } else {
-                    Button(onClick = { showQr = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.transfer_show_qr))
+                    else -> {
+                        Button(onClick = { showQr = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.transfer_show_qr))
+                        }
                     }
                 }
-                OutlinedButton(onClick = { saveFile.launch("kmail-account.kmail") }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { saveFile.launch("kmail-accounts.kmail") }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.transfer_save_file))
                 }
                 message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }

@@ -1,10 +1,16 @@
 package com.kmail.thekami.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -16,9 +22,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -31,10 +39,11 @@ import kotlinx.coroutines.launch
 
 private const val MIN_PASSPHRASE = 10
 
-/** Asks for the PIN (if App Lock is on) and a passphrase, then shows the result. */
+/** Lets the user pick accounts, asks for the PIN (if App Lock is on) and a passphrase, then shows the result. */
 @Composable
 fun TransferExportDialog(
-    account: Account,
+    accounts: List<Account>,
+    preselected: String?,
     onDismiss: () -> Unit,
     vm: TransferExportViewModel = hiltViewModel(),
 ) {
@@ -45,7 +54,8 @@ fun TransferExportDialog(
         TransferResultDialog(data = ready.data, onDismiss = onDismiss)
     } else {
         TransferFormDialog(
-            accountId = account.id,
+            accounts = accounts,
+            preselected = preselected,
             vm = vm,
             working = state is ExportUiState.Working,
             failed = state is ExportUiState.Failed,
@@ -56,7 +66,8 @@ fun TransferExportDialog(
 
 @Composable
 private fun TransferFormDialog(
-    accountId: String,
+    accounts: List<Account>,
+    preselected: String?,
     vm: TransferExportViewModel,
     working: Boolean,
     failed: Boolean,
@@ -65,6 +76,9 @@ private fun TransferFormDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val needsPin = remember { vm.lockEnabled }
+    var selected by remember {
+        mutableStateOf(if (preselected != null) setOf(preselected) else accounts.map { it.id }.toSet())
+    }
     // Plain remember on purpose: a PIN or passphrase must never reach saved instance state.
     var pin by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
@@ -72,7 +86,9 @@ private fun TransferFormDialog(
     var error by remember { mutableStateOf<String?>(null) }
 
     fun submit() {
+        val ids = accounts.map { it.id }.filter { it in selected }
         when {
+            ids.isEmpty() -> error = context.getString(R.string.transfer_none_selected)
             passphrase.length < MIN_PASSPHRASE -> error = context.getString(R.string.transfer_passphrase_short)
             passphrase != repeat -> error = context.getString(R.string.transfer_passphrase_mismatch)
             else -> scope.launch {
@@ -87,7 +103,7 @@ private fun TransferFormDialog(
                     }
                 }
                 error = null
-                vm.prepare(accountId, passphrase)
+                vm.prepare(ids, passphrase)
             }
         }
     }
@@ -97,13 +113,41 @@ private fun TransferFormDialog(
         title = { Text(stringResource(R.string.transfer_title)) },
         text = {
             SecureWindow()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(stringResource(R.string.transfer_intro), style = MaterialTheme.typography.bodyMedium)
-                if (needsPin) {
-                    SecretField(pin, { pin = it.filter(Char::isDigit).take(8) }, stringResource(R.string.settings_pin_enter), KeyboardType.NumberPassword)
+                if (accounts.size > 1) {
+                    Text(stringResource(R.string.transfer_choose), style = MaterialTheme.typography.labelLarge)
+                    accounts.forEach { account ->
+                        val checked = account.id in selected
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !working) {
+                                    selected = if (checked) selected - account.id else selected + account.id
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Checkbox(checked = checked, onCheckedChange = null)
+                            Text(account.emailAddress, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
                 }
-                SecretField(passphrase, { passphrase = it }, stringResource(R.string.transfer_passphrase), KeyboardType.Password)
-                SecretField(repeat, { repeat = it }, stringResource(R.string.transfer_passphrase_repeat), KeyboardType.Password)
+                if (needsPin) {
+                    PinField(pin, { pin = it.filter(Char::isDigit).take(8) }, stringResource(R.string.settings_pin_enter))
+                }
+                PassphraseField(passphrase, { passphrase = it }, stringResource(R.string.transfer_passphrase))
+                PassphraseField(
+                    value = repeat,
+                    onValueChange = { repeat = it },
+                    label = stringResource(R.string.transfer_passphrase_repeat),
+                    imeAction = ImeAction.Done,
+                    onDone = { if (!working) submit() },
+                )
                 val message = error ?: if (failed) stringResource(R.string.transfer_failed) else null
                 if (message != null) {
                     Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -121,14 +165,14 @@ private fun TransferFormDialog(
 }
 
 @Composable
-private fun SecretField(value: String, onChange: (String) -> Unit, label: String, type: KeyboardType) {
+private fun PinField(value: String, onChange: (String) -> Unit, label: String) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = type),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         modifier = Modifier.fillMaxWidth(),
     )
 }
