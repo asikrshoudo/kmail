@@ -124,7 +124,7 @@ fun WelcomeScreen(
                 WelcomeColumn(
                     modifier = Modifier.widthIn(max = 520.dp).fillMaxHeight(),
                     progress = progress,
-                    showHero = maxHeight >= 700.dp,
+                    showHero = this@BoxWithConstraints.maxHeight >= 700.dp,
                     onGetStarted = onGetStarted,
                     onScanQr = onScanQr,
                     onImportFile = onImportFile,
