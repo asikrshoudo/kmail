@@ -1,3 +1,4 @@
+
 name: Release
 
 on:
@@ -10,12 +11,13 @@ permissions:
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,20 +34,48 @@ jobs:
           cache-provider: basic
 
       - name: Accept Android SDK licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: Decode keystore
         env:
           KEYSTORE_B64: ${{ secrets.KMAIL_KEYSTORE_B64 }}
         run: |
-          test -n "$KEYSTORE_B64" || { echo "KMAIL_KEYSTORE_B64 secret is missing"; exit 1; }
+          test -n "$KEYSTORE_B64" || {
+            echo "KMAIL_KEYSTORE_B64 secret is missing"
+            exit 1
+          }
+
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kmail-release.jks"
 
-      - name: Read version
+      - name: Read and validate version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           NAME=$(grep '^VERSION_NAME=' version.properties | cut -d= -f2)
+
+          if [[ ! "$NAME" =~ ^([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then
+            echo "Invalid VERSION_NAME: $NAME"
+            exit 1
+          fi
+
+          TAG="kmail-v${NAME}"
+
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          echo "Checking release tag: $TAG"
+
+          if RESPONSE=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" 2>&1); then
+            echo "Release tag already exists: $TAG"
+            exit 1
+          elif [[ "$RESPONSE" == *"(HTTP 404)"* ]]; then
+            echo "Tag is available."
+          else
+            echo "$RESPONSE"
+            exit 1
+          fi
 
       - name: Test and build signed release APK and AAB
         env:
@@ -53,21 +83,29 @@ jobs:
           KMAIL_KEYSTORE_PASSWORD: ${{ secrets.KMAIL_KEYSTORE_PASSWORD }}
           KMAIL_KEY_ALIAS: ${{ secrets.KMAIL_KEY_ALIAS }}
           KMAIL_KEY_PASSWORD: ${{ secrets.KMAIL_KEY_PASSWORD }}
-        run: gradle --no-daemon --stacktrace testDebugUnitTest assembleRelease bundleRelease
+        run: |
+          gradle --no-daemon --stacktrace \
+            testDebugUnitTest \
+            assembleRelease \
+            bundleRelease
 
       - name: Verify APK signature
         run: |
-          set -o pipefail
+          set -euo pipefail
+
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          "$APKSIGNER" verify --verbose --print-certs app/build/outputs/apk/release/*.apk
+
+          "$APKSIGNER" verify --verbose --print-certs \
+            app/build/outputs/apk/release/*.apk
 
       - name: Remove keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/kmail-release.jks"
 
-      - uses: actions/upload-artifact@v7
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: kmail-aab
+          name: kmail-v${{ steps.version.outputs.name }}-aab
           path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
           retention-days: 30
@@ -77,11 +115,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
-          RUN_NUMBER: ${{ github.run_number }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
-          cp "$APK" "kmail-${VERSION_NAME}-build${RUN_NUMBER}.apk"
-          gh release create "v${VERSION_NAME}-build.${RUN_NUMBER}" \
-            --target "$GITHUB_SHA" --generate-notes --latest \
-            --title "Kmail ${VERSION_NAME} (build ${RUN_NUMBER})" \
-            "kmail-${VERSION_NAME}-build${RUN_NUMBER}.apk"
+          set -euo pipefail
+
+          APK=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -type f | head -1)
+          AAB=$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' -type f | head -1)
+
+          test -n "$APK" || { echo "APK not found"; exit 1; }
+          test -n "$AAB" || { echo "AAB not found"; exit 1; }
+
+          APK_NAME="kmail-v${VERSION_NAME}.apk"
+          AAB_NAME="kmail-v${VERSION_NAME}.aab"
+
+          cp "$APK" "$APK_NAME"
+          cp "$AAB" "$AAB_NAME"
+
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --generate-notes \
+            --latest \
+            --title "Kmail v${VERSION_NAME}" \
+            "$APK_NAME" \
+            "$AAB_NAME"
+
+          echo "Successfully published Kmail v${VERSION_NAME}"
+
