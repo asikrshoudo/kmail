@@ -2,17 +2,32 @@ package com.kmail.thekami.ui.lock
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -29,12 +44,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kmail.thekami.R
 import com.kmail.thekami.data.security.PinVerify
+import com.kmail.thekami.ui.components.AuthCard
+import com.kmail.thekami.ui.components.AuthPrimaryButton
+import com.kmail.thekami.ui.components.softGlow
 import kotlinx.coroutines.launch
 
 /** Covers the whole app and swallows touches. The app underneath keeps its state. */
@@ -47,6 +69,7 @@ fun LockScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
     var pin by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<PinVerify?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -78,35 +101,89 @@ fun LockScreen(
         modifier = modifier
             .fillMaxSize()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
-        color = MaterialTheme.colorScheme.surface,
+        color = scheme.surface,
     ) {
-        Column(
-            modifier = Modifier.safeDrawingPadding().padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displaySmall)
-            Text(stringResource(R.string.lock_title), style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = pin,
-                onValueChange = { pin = it.filter(Char::isDigit).take(8) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.lock_pin_label)) },
-                singleLine = true,
-                isError = error != null,
-                supportingText = { if (error != null) Text(error) },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { submit() }),
-            )
-            Button(onClick = { submit() }, enabled = pin.length >= 4 && !busy, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.lock_unlock))
-            }
-            if (biometricAvailable) {
-                TextButton(onClick = onBiometric) { Text(stringResource(R.string.lock_biometric)) }
-            }
-            if (recovery != null) {
-                TextButton(onClick = { showRecovery = true }) { Text(stringResource(R.string.lock_forgot)) }
+        Box(Modifier.fillMaxSize().softGlow().safeDrawingPadding()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(
+                    modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier.size(72.dp).background(scheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(34.dp),
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.lock_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = scheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    AuthCard {
+                        OutlinedTextField(
+                            value = pin,
+                            onValueChange = { pin = it.filter(Char::isDigit).take(8) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.lock_pin_label)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            textStyle = MaterialTheme.typography.titleLarge.copy(
+                                textAlign = TextAlign.Center,
+                                letterSpacing = 6.sp,
+                            ),
+                            isError = error != null,
+                            supportingText = { if (error != null) Text(error) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.NumberPassword,
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(onDone = { submit() }),
+                        )
+                        AuthPrimaryButton(
+                            text = stringResource(R.string.lock_unlock),
+                            onClick = { submit() },
+                            enabled = pin.length >= 4 && !busy,
+                            arrow = false,
+                        )
+                    }
+                    if (biometricAvailable) {
+                        FilledTonalButton(
+                            onClick = onBiometric,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        ) {
+                            Icon(Icons.Rounded.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.lock_biometric))
+                        }
+                    }
+                    if (recovery != null) {
+                        TextButton(onClick = { showRecovery = true }) {
+                            Text(stringResource(R.string.lock_forgot))
+                        }
+                    }
+                }
             }
         }
     }

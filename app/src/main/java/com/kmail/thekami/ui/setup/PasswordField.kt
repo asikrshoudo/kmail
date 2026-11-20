@@ -1,10 +1,16 @@
 package com.kmail.thekami.ui.setup
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +22,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import com.kmail.thekami.R
 
 @Composable
@@ -28,23 +35,27 @@ fun PasswordField(
     modifier: Modifier = Modifier,
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
+    val toggleDescription = stringResource(
+        if (visible) R.string.credentials_password_hide else R.string.credentials_password_show,
+    )
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
         label = { Text(stringResource(R.string.credentials_password_label)) },
         singleLine = true,
+        shape = RoundedCornerShape(16.dp),
         isError = isError,
         supportingText = {
             if (isError) Text(stringResource(R.string.credentials_password_error))
         },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        leadingIcon = { Icon(Icons.Rounded.Lock, contentDescription = null) },
         trailingIcon = {
-            TextButton(onClick = { visible = !visible }) {
-                Text(
-                    stringResource(
-                        if (visible) R.string.credentials_password_hide else R.string.credentials_password_show,
-                    ),
+            IconButton(onClick = { visible = !visible }) {
+                Icon(
+                    imageVector = if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = toggleDescription,
                 )
             }
         },
