@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,25 +24,26 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * One frame for every setup screen. The header sits on top, the form scrolls, and the main
- * action stays pinned at the bottom above the keyboard. Wide landscape screens put the header
- * on the left and the form on the right.
+ * One frame for every setup screen. The wordmark and an optional action sit on top, the form
+ * scrolls, and the main action stays pinned at the bottom above the keyboard. Wide landscape
+ * screens put the header on the left and the form on the right.
  */
 @Composable
 internal fun AuthLayout(
@@ -65,7 +65,7 @@ internal fun AuthLayout(
         val wide = maxWidth >= 720.dp && maxWidth > maxHeight
         if (wide) {
             Column(Modifier.fillMaxSize().padding(horizontal = 40.dp)) {
-                ActionBar(actions)
+                TopBar(actions)
                 Row(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(64.dp),
@@ -87,7 +87,7 @@ internal fun AuthLayout(
                         ) { content() }
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) { bottomBar() }
                     }
                 }
@@ -97,7 +97,7 @@ internal fun AuthLayout(
                 Column(
                     modifier = Modifier.widthIn(max = 480.dp).fillMaxSize().padding(horizontal = 24.dp),
                 ) {
-                    ActionBar(actions)
+                    TopBar(actions)
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -105,13 +105,14 @@ internal fun AuthLayout(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
+                        Spacer(Modifier.size(16.dp))
                         AuthHeader(overline, title, subtitle)
                         Spacer(Modifier.size(8.dp))
                         content()
                     }
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) { bottomBar() }
                 }
             }
@@ -120,12 +121,15 @@ internal fun AuthLayout(
 }
 
 @Composable
-private fun ActionBar(actions: @Composable RowScope.() -> Unit) {
+private fun TopBar(actions: @Composable RowScope.() -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-        horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
-    ) { actions() }
+    ) {
+        KmailWordmark()
+        Spacer(Modifier.weight(1f))
+        actions()
+    }
 }
 
 @Composable
@@ -153,25 +157,42 @@ private fun AuthHeader(overline: String?, title: String, subtitle: String?) {
     }
 }
 
-/** Text field with the keyboard rules every setup field shares. */
+/** Fields with no box: a transparent background and only a line underneath. */
+@Composable
+internal fun authFieldColors(): TextFieldColors {
+    val scheme = MaterialTheme.colorScheme
+    return TextFieldDefaults.colors(
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = Color.Transparent,
+        errorContainerColor = Color.Transparent,
+        unfocusedIndicatorColor = scheme.outline,
+        disabledIndicatorColor = scheme.outlineVariant,
+    )
+}
+
+/** Underlined text field with an optional leading icon and the keyboard rules every setup field shares. */
 @Composable
 internal fun AuthTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
     errorText: String? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next,
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
         singleLine = true,
         isError = errorText != null,
+        leadingIcon = icon?.let { vector -> { Icon(vector, contentDescription = null) } },
         supportingText = { if (errorText != null) Text(errorText) },
+        colors = authFieldColors(),
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.None,
             autoCorrectEnabled = false,
@@ -194,20 +215,6 @@ internal fun AuthPrimaryButton(
         modifier = modifier.fillMaxWidth().heightIn(min = 56.dp),
     ) {
         Text(text, style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-@Composable
-internal fun AuthSecondaryButton(
-    icon: ImageVector,
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedButton(onClick = onClick, modifier = modifier.heightIn(min = 48.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(text, textAlign = TextAlign.Center)
     }
 }
 

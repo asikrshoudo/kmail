@@ -19,14 +19,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Fingerprint
-import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.kmail.thekami.R
 import com.kmail.thekami.data.security.PinVerify
 import com.kmail.thekami.ui.components.AuthPrimaryButton
+import com.kmail.thekami.ui.components.KmailWordmark
+import com.kmail.thekami.ui.components.authFieldColors
 import kotlinx.coroutines.launch
 
 /** Covers the whole app and swallows touches. The app underneath keeps its state. */
@@ -109,16 +111,15 @@ fun LockScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon(
-                    Icons.Rounded.Lock,
-                    contentDescription = null,
-                    tint = scheme.primary,
-                    modifier = Modifier.size(32.dp),
-                )
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineMedium,
+                KmailWordmark(
+                    style = MaterialTheme.typography.headlineLarge,
                     modifier = Modifier.semantics { heading() },
+                )
+                Icon(
+                    Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = scheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
                 )
                 Text(
                     text = stringResource(R.string.lock_title),
@@ -127,7 +128,7 @@ fun LockScreen(
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.size(12.dp))
-                OutlinedTextField(
+                TextField(
                     value = pin,
                     onValueChange = { pin = it.filter(Char::isDigit).take(8) },
                     modifier = Modifier.fillMaxWidth(),
@@ -140,6 +141,7 @@ fun LockScreen(
                     isError = error != null,
                     supportingText = { if (error != null) Text(error) },
                     visualTransformation = PasswordVisualTransformation(),
+                    colors = authFieldColors(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.NumberPassword,
                         imeAction = ImeAction.Done,
@@ -153,7 +155,7 @@ fun LockScreen(
                 )
                 if (biometricAvailable) {
                     TextButton(onClick = onBiometric) {
-                        Icon(Icons.Rounded.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Outlined.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.lock_biometric))
                     }

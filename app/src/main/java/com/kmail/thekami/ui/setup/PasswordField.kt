@@ -3,12 +3,13 @@ package com.kmail.thekami.ui.setup
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.kmail.thekami.R
+import com.kmail.thekami.ui.components.authFieldColors
 
 @Composable
 fun PasswordField(
@@ -35,7 +37,7 @@ fun PasswordField(
     val toggleDescription = stringResource(
         if (visible) R.string.credentials_password_hide else R.string.credentials_password_show,
     )
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
@@ -46,14 +48,16 @@ fun PasswordField(
             if (isError) Text(stringResource(R.string.credentials_password_error))
         },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
                 Icon(
-                    imageVector = if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    imageVector = if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                     contentDescription = toggleDescription,
                 )
             }
         },
+        colors = authFieldColors(),
         keyboardOptions = KeyboardOptions(
             autoCorrectEnabled = false,
             keyboardType = KeyboardType.Password,

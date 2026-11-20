@@ -19,21 +19,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AlternateEmail
-import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Mail
 import androidx.compose.material.icons.rounded.QrCode2
-import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -53,9 +47,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kmail.thekami.R
+import com.kmail.thekami.ui.components.KmailWordmark
 import com.kmail.thekami.ui.components.LegalLinks
 import com.kmail.thekami.ui.theme.rememberReducedMotion
 
@@ -68,16 +62,20 @@ private val features = listOf(
 )
 
 /**
- * The first screen. Phones get one column with the buttons pinned at the bottom; wide or landscape
+ * The first screen. Phones get one column with the button pinned at the bottom; wide or landscape
  * screens get the inbox sketch on one side and the text on the other. Content eases in one piece
  * after another, unless the system animation scale is off.
+ *
+ * QR and file import now live behind "Other ways to log in" on the login screen, so [onScanQr]
+ * and [onImportFile] are no longer used here. They stay so existing callers still compile.
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun WelcomeScreen(
     onGetStarted: () -> Unit,
-    onScanQr: () -> Unit,
-    onImportFile: () -> Unit,
     modifier: Modifier = Modifier,
+    onScanQr: () -> Unit = {},
+    onImportFile: () -> Unit = {},
 ) {
     val progress = rememberEntrance(rememberReducedMotion())
     val primary = MaterialTheme.colorScheme.primary
@@ -116,8 +114,6 @@ fun WelcomeScreen(
                     progress = progress,
                     showHero = false,
                     onGetStarted = onGetStarted,
-                    onScanQr = onScanQr,
-                    onImportFile = onImportFile,
                 )
             }
         } else {
@@ -127,8 +123,6 @@ fun WelcomeScreen(
                     progress = progress,
                     showHero = this@BoxWithConstraints.maxHeight >= 700.dp,
                     onGetStarted = onGetStarted,
-                    onScanQr = onScanQr,
-                    onImportFile = onImportFile,
                 )
             }
         }
@@ -140,31 +134,20 @@ private fun WelcomeColumn(
     progress: State<Float>,
     showHero: Boolean,
     onGetStarted: () -> Unit,
-    onScanQr: () -> Unit,
-    onImportFile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        // Only this part scrolls, so the buttons below never move off screen.
+        // Only this part scrolls, so the button below never moves off screen.
         Column(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (showHero) WelcomeHero(Modifier.fillMaxWidth().reveal(progress, 0))
-            Row(
+            KmailWordmark(
                 modifier = Modifier.reveal(progress, 1),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(40.dp).background(scheme.primary, RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.Mail, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
-                }
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-            }
+                style = MaterialTheme.typography.headlineMedium,
+            )
             Text(
                 text = stringResource(R.string.welcome_headline),
                 style = MaterialTheme.typography.headlineLarge,
@@ -183,26 +166,12 @@ private fun WelcomeColumn(
             }
         }
         Spacer(Modifier.size(12.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).reveal(progress, 7),
             ) {
                 Text(stringResource(R.string.welcome_get_started), style = MaterialTheme.typography.titleMedium)
-            }
-            Text(
-                text = stringResource(R.string.welcome_other_device),
-                style = MaterialTheme.typography.labelLarge,
-                color = scheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().reveal(progress, 8),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().reveal(progress, 8),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OtherDeviceButton(Icons.Rounded.QrCodeScanner, R.string.welcome_scan_qr, onScanQr, Modifier.weight(1f))
-                OtherDeviceButton(Icons.Rounded.FolderOpen, R.string.welcome_import_file, onImportFile, Modifier.weight(1f))
             }
             LegalLinks(Modifier.reveal(progress, 8))
         }
@@ -223,15 +192,6 @@ private fun FeatureRow(feature: Feature, modifier: Modifier = Modifier) {
             Text(stringResource(feature.title), style = MaterialTheme.typography.titleSmall)
             Text(stringResource(feature.body), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
         }
-    }
-}
-
-@Composable
-private fun OtherDeviceButton(icon: ImageVector, @StringRes label: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    FilledTonalButton(onClick = onClick, modifier = modifier.heightIn(min = 48.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(stringResource(label), textAlign = TextAlign.Center)
     }
 }
 

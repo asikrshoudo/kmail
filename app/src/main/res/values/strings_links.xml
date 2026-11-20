@@ -2,4 +2,6 @@
 <resources>
     <string name="legal_privacy_policy">Privacy policy</string>
     <string name="legal_how_to_use">How to use</string>
+    <string name="login_other_ways">Other ways to log in</string>
+    <string name="login_other_ways_intro">Already use Kmail on another device? Bring your accounts over by scanning a QR code or importing a file.</string>
 </resources>

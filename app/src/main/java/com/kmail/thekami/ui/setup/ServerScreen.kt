@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +28,7 @@ import com.kmail.thekami.ui.components.AuthLayout
 import com.kmail.thekami.ui.components.AuthPrimaryButton
 import com.kmail.thekami.ui.components.AuthTextField
 import com.kmail.thekami.ui.components.NoteBanner
+import com.kmail.thekami.ui.components.authFieldColors
 
 @Composable
 fun ServerScreen(
@@ -60,6 +63,7 @@ fun ServerScreen(
                 onValueChange = onHostChange,
                 label = stringResource(R.string.server_host_label),
                 modifier = Modifier.weight(1f),
+                icon = Icons.Outlined.Dns,
                 errorText = if (ServerFormError.HOST_INVALID in state.errors) {
                     stringResource(R.string.server_host_error)
                 } else {
@@ -71,7 +75,7 @@ fun ServerScreen(
                 value = state.form.port,
                 onValueChange = onPortChange,
                 label = stringResource(R.string.server_port_label),
-                modifier = Modifier.width(112.dp),
+                modifier = Modifier.width(104.dp),
                 errorText = if (ServerFormError.PORT_INVALID in state.errors) {
                     stringResource(R.string.server_port_error)
                 } else {
@@ -99,7 +103,7 @@ fun ServerScreen(
             )
         }
 
-        OutlinedTextField(
+        TextField(
             value = stringResource(R.string.server_auth_normal),
             onValueChange = {},
             modifier = Modifier.fillMaxWidth(),
@@ -107,12 +111,14 @@ fun ServerScreen(
             readOnly = true,
             enabled = false,
             singleLine = true,
+            colors = authFieldColors(),
         )
 
         AuthTextField(
             value = state.form.username,
             onValueChange = onUsernameChange,
             label = stringResource(R.string.server_username_label),
+            icon = Icons.Outlined.Person,
             errorText = if (ServerFormError.USERNAME_EMPTY in state.errors) {
                 stringResource(R.string.server_username_error)
             } else {
