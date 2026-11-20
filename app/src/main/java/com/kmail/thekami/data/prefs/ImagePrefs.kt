@@ -42,5 +42,5 @@ class ImagePrefs @Inject constructor(
     private fun trusted(): Set<String> = prefs.getStringSet("trusted", emptySet()).orEmpty().toSet()
 
     private fun readMode(): ImageMode =
-        runCatching { ImageMode.valueOf(prefs.getString("mode", null) ?: "ALWAYS") }.getOrDefault(ImageMode.ALWAYS)
+        runCatching { ImageMode.valueOf(prefs.getString("mode", null) ?: "ASK") }.getOrDefault(ImageMode.ASK)
 }

@@ -30,4 +30,4 @@ Kmail is not directed at children under 13.
 
 ## Changes and contact
 
-If this policy changes, the date above changes. Questions: CONTACT_EMAIL
+If this policy changes, the date above changes. Questions: info@thekami.tech
