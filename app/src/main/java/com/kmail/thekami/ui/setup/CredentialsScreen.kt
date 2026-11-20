@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.setup
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,11 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,7 +57,7 @@ fun CredentialsScreen(
         actions = {
             IconButton(onClick = { showHelp = true }) {
                 Icon(
-                    imageVector = Icons.Outlined.Info,
+                    imageVector = AppIcons.Info,
                     contentDescription = stringResource(R.string.credentials_help_description),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -87,7 +83,7 @@ fun CredentialsScreen(
             value = state.email,
             onValueChange = onEmailChange,
             label = stringResource(R.string.credentials_email_label),
-            icon = Icons.Outlined.Email,
+            icon = AppIcons.Mail,
             errorText = if (state.emailError) stringResource(R.string.credentials_email_error) else null,
             keyboardType = KeyboardType.Email,
             imeAction = ImeAction.Next,
@@ -152,8 +148,8 @@ private fun OtherWaysDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.size(8.dp))
-                WayRow(Icons.Outlined.QrCodeScanner, stringResource(R.string.credentials_scan_qr), onScanQr)
-                WayRow(Icons.Outlined.FolderOpen, stringResource(R.string.credentials_import_file), onImportFile)
+                WayRow(AppIcons.QrScan, stringResource(R.string.credentials_scan_qr), onScanQr)
+                WayRow(AppIcons.FolderOpen, stringResource(R.string.credentials_import_file), onImportFile)
             }
         },
         confirmButton = {

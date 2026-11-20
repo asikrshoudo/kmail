@@ -1,11 +1,8 @@
 package com.kmail.thekami.ui.setup
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -48,11 +45,11 @@ fun PasswordField(
             if (isError) Text(stringResource(R.string.credentials_password_error))
         },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+        leadingIcon = { Icon(AppIcons.Lock, contentDescription = null) },
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
                 Icon(
-                    imageVector = if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    imageVector = if (visible) AppIcons.EyeOff else AppIcons.Eye,
                     contentDescription = toggleDescription,
                 )
             }

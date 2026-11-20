@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.setup
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -23,10 +24,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AlternateEmail
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,9 +53,9 @@ import com.kmail.thekami.ui.theme.rememberReducedMotion
 private class Feature(val icon: ImageVector, @StringRes val title: Int, @StringRes val body: Int)
 
 private val features = listOf(
-    Feature(Icons.Rounded.AlternateEmail, R.string.welcome_feature_any_title, R.string.welcome_feature_any_body),
-    Feature(Icons.Rounded.Lock, R.string.welcome_feature_private_title, R.string.welcome_feature_private_body),
-    Feature(Icons.Rounded.QrCode2, R.string.welcome_feature_move_title, R.string.welcome_feature_move_body),
+    Feature(AppIcons.At, R.string.welcome_feature_any_title, R.string.welcome_feature_any_body),
+    Feature(AppIcons.Lock, R.string.welcome_feature_private_title, R.string.welcome_feature_private_body),
+    Feature(AppIcons.QrCode, R.string.welcome_feature_move_title, R.string.welcome_feature_move_body),
 )
 
 /**

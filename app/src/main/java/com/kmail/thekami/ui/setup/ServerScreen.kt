@@ -1,14 +1,11 @@
 package com.kmail.thekami.ui.setup
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +60,7 @@ fun ServerScreen(
                 onValueChange = onHostChange,
                 label = stringResource(R.string.server_host_label),
                 modifier = Modifier.weight(1f),
-                icon = Icons.Outlined.Dns,
+                icon = AppIcons.Server,
                 errorText = if (ServerFormError.HOST_INVALID in state.errors) {
                     stringResource(R.string.server_host_error)
                 } else {
@@ -118,7 +115,7 @@ fun ServerScreen(
             value = state.form.username,
             onValueChange = onUsernameChange,
             label = stringResource(R.string.server_username_label),
-            icon = Icons.Outlined.Person,
+            icon = AppIcons.Account,
             errorText = if (ServerFormError.USERNAME_EMPTY in state.errors) {
                 stringResource(R.string.server_username_error)
             } else {
@@ -145,7 +142,7 @@ private fun SecurityChip(selected: Boolean, label: String, onClick: () -> Unit) 
         onClick = onClick,
         label = { Text(label) },
         leadingIcon = if (selected) {
-            { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            { Icon(AppIcons.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
         } else {
             null
         },

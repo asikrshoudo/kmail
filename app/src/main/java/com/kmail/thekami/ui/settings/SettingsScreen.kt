@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.settings
 
+import com.kmail.thekami.ui.components.AppIcons
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -23,20 +24,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.QrCode2
-import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -170,7 +157,7 @@ fun SettingsScreen(
                 title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = { goBack() }) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.reader_back))
+                        Icon(AppIcons.Back, contentDescription = stringResource(R.string.reader_back))
                     }
                 },
             )
@@ -200,14 +187,14 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(AppIcons.AddAccount, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Text(
                                 stringResource(R.string.home_add_account),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        NavRow(Icons.Rounded.QrCode2, stringResource(R.string.transfer_title), stringResource(R.string.transfer_row_subtitle)) { dialog = SettingsDialog.Transfer(null) }
+                        NavRow(AppIcons.QrCode, stringResource(R.string.transfer_title), stringResource(R.string.transfer_row_subtitle)) { dialog = SettingsDialog.Transfer(null) }
                     }
 
                     SettingsPage.Signature.name -> {
@@ -341,7 +328,7 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             Icon(
-                                Icons.AutoMirrored.Rounded.OpenInNew,
+                                AppIcons.OpenInNew,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -363,32 +350,32 @@ fun SettingsScreen(
                     else -> {
                         val open = { p: SettingsPage -> pageName = p.name }
                         NavRow(
-                            Icons.Rounded.AccountCircle,
+                            AppIcons.AccountCircle,
                             stringResource(R.string.settings_accounts),
                             accounts.orEmpty().joinToString { it.emailAddress }.ifEmpty { null },
                         ) { open(SettingsPage.Accounts) }
                         NavDivider()
-                        NavRow(Icons.Rounded.EditNote, stringResource(R.string.settings_signature_title), null) {
+                        NavRow(AppIcons.NoteEdit, stringResource(R.string.settings_signature_title), null) {
                             open(SettingsPage.Signature)
                         }
                         NavDivider()
-                        NavRow(Icons.Rounded.Palette, stringResource(R.string.settings_appearance), themeSummary) {
+                        NavRow(AppIcons.Palette, stringResource(R.string.settings_appearance), themeSummary) {
                             open(SettingsPage.Appearance)
                         }
                         NavDivider()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             NavRow(
-                                Icons.Rounded.Language,
+                                AppIcons.Language,
                                 stringResource(R.string.settings_language),
                                 currentLanguageLabel(),
                             ) { open(SettingsPage.Language) }
                             NavDivider()
                         }
-                        NavRow(Icons.Rounded.Sync, stringResource(R.string.settings_sync), null) { open(SettingsPage.Sync) }
+                        NavRow(AppIcons.Sync, stringResource(R.string.settings_sync), null) { open(SettingsPage.Sync) }
                         NavDivider()
-                        NavRow(Icons.Rounded.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }
+                        NavRow(AppIcons.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }
                         NavDivider()
-                        NavRow(Icons.Rounded.Info, stringResource(R.string.settings_about), null) { open(SettingsPage.About) }
+                        NavRow(AppIcons.Info, stringResource(R.string.settings_about), null) { open(SettingsPage.About) }
                     }
                 }
             }
@@ -510,7 +497,7 @@ private fun NavRow(icon: ImageVector, title: String, subtitle: String?, onClick:
                 )
             }
         }
-        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -537,7 +524,7 @@ private fun AccountRow(account: Account, onClick: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -552,14 +539,14 @@ private fun AccountDetailPage(account: Account, onTransfer: () -> Unit, onRemove
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
         )
         HorizontalDivider()
-        NavRow(Icons.Rounded.QrCode2, stringResource(R.string.transfer_title), stringResource(R.string.transfer_row_subtitle), onTransfer)
+        NavRow(AppIcons.QrCode, stringResource(R.string.transfer_title), stringResource(R.string.transfer_row_subtitle), onTransfer)
         NavDivider()
         Row(
             Modifier.fillMaxWidth().clickable(onClick = onRemove).padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Icon(AppIcons.Trash, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             Text(
                 stringResource(R.string.settings_remove_account),
                 style = MaterialTheme.typography.bodyLarge,

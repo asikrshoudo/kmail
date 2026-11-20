@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.setup
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -46,7 +45,7 @@ internal fun WelcomeHero(modifier: Modifier = Modifier) {
                 .background(scheme.primary, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Rounded.Lock, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(24.dp))
+            Icon(AppIcons.Lock, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(24.dp))
         }
     }
 }

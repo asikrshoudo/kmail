@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.compose
 
+import com.kmail.thekami.ui.components.AppIcons
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -21,13 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.AttachFile
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -130,16 +124,16 @@ fun ComposeScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = leave) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.reader_back))
+                        Icon(AppIcons.Back, contentDescription = stringResource(R.string.reader_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { attachLauncher.launch(arrayOf("*/*")) }) {
-                        Icon(Icons.Rounded.AttachFile, contentDescription = stringResource(R.string.compose_attach))
+                        Icon(AppIcons.Attachment, contentDescription = stringResource(R.string.compose_attach))
                     }
                     IconButton(onClick = vm::send, enabled = canSend) {
                         Icon(
-                            Icons.AutoMirrored.Rounded.Send,
+                            AppIcons.Send,
                             contentDescription = stringResource(R.string.compose_send),
                             tint = if (canSend) {
                                 MaterialTheme.colorScheme.primary
@@ -150,7 +144,7 @@ fun ComposeScreen(
                     }
                     Box {
                         IconButton(onClick = { moreMenu = true }) {
-                            Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                            Icon(AppIcons.More, contentDescription = stringResource(R.string.home_more_options))
                         }
                         DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
                             DropdownMenuItem(
@@ -227,7 +221,7 @@ fun ComposeScreen(
                 }
                 if (canSwitch) {
                     Icon(
-                        Icons.Rounded.ExpandMore,
+                        AppIcons.ChevronDown,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -275,7 +269,7 @@ fun ComposeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        Icons.Rounded.AttachFile,
+                        AppIcons.Attachment,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
@@ -289,7 +283,7 @@ fun ComposeScreen(
                     )
                     IconButton(onClick = { vm.removeAttachment(attachment) }) {
                         Icon(
-                            Icons.Rounded.Close,
+                            AppIcons.Close,
                             contentDescription = stringResource(R.string.compose_remove_attachment, attachment.name),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

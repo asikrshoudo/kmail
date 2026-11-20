@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.setup
 
+import com.kmail.thekami.ui.components.AppIcons
 import android.Manifest
 import android.content.pm.PackageManager
 import android.util.Size
@@ -21,8 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,7 +86,7 @@ fun ScanScreen(onScanned: (String) -> Boolean, onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.scan_back), tint = Color.White)
+                Icon(AppIcons.Back, contentDescription = stringResource(R.string.scan_back), tint = Color.White)
             }
             Text(stringResource(R.string.scan_title), color = Color.White, style = MaterialTheme.typography.titleLarge)
         }

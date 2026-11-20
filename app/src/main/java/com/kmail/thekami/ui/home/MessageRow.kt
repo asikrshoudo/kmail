@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.home
 
+import com.kmail.thekami.ui.components.AppIcons
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.animation.core.RepeatMode
@@ -23,13 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material.icons.rounded.AttachFile
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -120,8 +114,8 @@ fun SwipeableMessageRow(
                     .padding(horizontal = 24.dp),
                 contentAlignment = if (delete) Alignment.CenterEnd else Alignment.CenterStart,
             ) {
-                if (archive) Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.home_archive))
-                if (delete) Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.home_delete))
+                if (archive) Icon(AppIcons.Archive, contentDescription = stringResource(R.string.home_archive))
+                if (delete) Icon(AppIcons.Trash, contentDescription = stringResource(R.string.home_delete))
             }
         },
     ) {
@@ -196,7 +190,7 @@ private fun MessageRow(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp, top = 2.dp)) {
                 if (item.hasAttachments) {
                     Icon(
-                        Icons.Rounded.AttachFile,
+                        AppIcons.Attachment,
                         contentDescription = stringResource(R.string.home_attachment),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -212,7 +206,7 @@ private fun MessageRow(
             }
             IconButton(onClick = onToggleStar, modifier = Modifier.size(44.dp)) {
                 Icon(
-                    imageVector = if (item.isStarred) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    imageVector = if (item.isStarred) AppIcons.Star else AppIcons.StarOutline,
                     contentDescription = stringResource(R.string.home_toggle_star),
                     tint = if (item.isStarred) StarAmber else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(22.dp),
@@ -236,7 +230,7 @@ private fun Avatar(item: MessageItem, selected: Boolean) {
         contentAlignment = Alignment.Center,
     ) {
         if (selected) {
-            Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+            Icon(AppIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
         } else {
             Text(initial, style = MaterialTheme.typography.titleMedium, color = Color.White)
         }

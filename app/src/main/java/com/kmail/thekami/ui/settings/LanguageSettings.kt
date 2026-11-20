@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.settings
 
+import com.kmail.thekami.ui.components.AppIcons
 import android.app.LocaleManager
 import android.content.Context
 import android.os.Build
@@ -10,8 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,7 +76,7 @@ fun LanguagePage() {
             ) {
                 Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 if (tag == current) {
-                    Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(AppIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }

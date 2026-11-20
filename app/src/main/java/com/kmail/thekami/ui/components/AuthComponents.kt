@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -230,7 +228,7 @@ internal fun NoteBanner(text: String, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            Icons.Rounded.Info,
+            AppIcons.Info,
             contentDescription = null,
             tint = scheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),

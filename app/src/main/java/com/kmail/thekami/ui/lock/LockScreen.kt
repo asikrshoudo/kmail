@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.lock
 
+import com.kmail.thekami.ui.components.AppIcons
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -18,9 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Fingerprint
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -116,7 +114,7 @@ fun LockScreen(
                     modifier = Modifier.semantics { heading() },
                 )
                 Icon(
-                    Icons.Outlined.Lock,
+                    AppIcons.Lock,
                     contentDescription = null,
                     tint = scheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
@@ -155,7 +153,7 @@ fun LockScreen(
                 )
                 if (biometricAvailable) {
                     TextButton(onClick = onBiometric) {
-                        Icon(Icons.Outlined.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(AppIcons.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.lock_biometric))
                     }

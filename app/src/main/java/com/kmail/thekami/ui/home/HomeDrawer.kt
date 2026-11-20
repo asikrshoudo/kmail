@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.home
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,24 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.AllInbox
-import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Drafts
-import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.Email
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.MarkEmailUnread
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.Report
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,13 +44,13 @@ import com.kmail.thekami.data.db.FolderEntity
 import com.kmail.thekami.domain.model.FolderRole
 
 fun folderIcon(role: FolderRole): ImageVector = when (role) {
-    FolderRole.INBOX -> Icons.Rounded.Inbox
-    FolderRole.SENT -> Icons.AutoMirrored.Rounded.Send
-    FolderRole.DRAFTS -> Icons.Rounded.Drafts
-    FolderRole.ARCHIVE -> Icons.Rounded.Archive
-    FolderRole.SPAM -> Icons.Rounded.Report
-    FolderRole.TRASH -> Icons.Rounded.Delete
-    FolderRole.CUSTOM -> Icons.Rounded.Folder
+    FolderRole.INBOX -> AppIcons.Inbox
+    FolderRole.SENT -> AppIcons.Send
+    FolderRole.DRAFTS -> AppIcons.MailOpen
+    FolderRole.ARCHIVE -> AppIcons.Archive
+    FolderRole.SPAM -> AppIcons.Spam
+    FolderRole.TRASH -> AppIcons.Trash
+    FolderRole.CUSTOM -> AppIcons.Folder
 }
 
 @Composable
@@ -148,7 +131,7 @@ private fun DrawerHeader() {
             Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Rounded.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(AppIcons.Mail, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
         Text(
             text = stringResource(R.string.app_name),
@@ -192,7 +175,7 @@ fun HomeDrawer(
                 DrawerHeader()
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Rounded.AllInbox, contentDescription = null) },
+                    icon = { Icon(AppIcons.InboxAll, contentDescription = null) },
                     label = { Text(stringResource(R.string.home_all_inboxes)) },
                     badge = { UnreadPill(allUnread) },
                     selected = state.selection is MailboxSelection.Unified,
@@ -200,14 +183,14 @@ fun HomeDrawer(
                     modifier = pad,
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Rounded.StarBorder, contentDescription = null) },
+                    icon = { Icon(AppIcons.StarOutline, contentDescription = null) },
                     label = { Text(stringResource(R.string.sidebar_starred)) },
                     selected = state.selection is MailboxSelection.Starred,
                     onClick = { onSelect(MailboxSelection.Starred) },
                     modifier = pad,
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Rounded.MarkEmailUnread, contentDescription = null) },
+                    icon = { Icon(AppIcons.MarkUnread, contentDescription = null) },
                     label = { Text(stringResource(R.string.sidebar_unread)) },
                     selected = state.selection is MailboxSelection.Unread,
                     onClick = { onSelect(MailboxSelection.Unread) },
@@ -245,7 +228,7 @@ fun HomeDrawer(
                             Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
                         }
                         Icon(
-                            if (switching) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            if (switching) AppIcons.ChevronUp else AppIcons.ChevronDown,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -282,7 +265,7 @@ fun HomeDrawer(
                                     )
                                     if (isActive) {
                                         Icon(
-                                            Icons.Rounded.Check,
+                                            AppIcons.Check,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
                                         )
@@ -292,7 +275,7 @@ fun HomeDrawer(
                                 }
                             }
                             NavigationDrawerItem(
-                                icon = { Icon(Icons.Rounded.PersonAdd, contentDescription = null) },
+                                icon = { Icon(AppIcons.AddAccount, contentDescription = null) },
                                 label = { Text(stringResource(R.string.home_add_account)) },
                                 selected = false,
                                 onClick = onAddAccount,
@@ -326,7 +309,7 @@ fun HomeDrawer(
 
                 HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp))
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Rounded.EditNote, contentDescription = null) },
+                    icon = { Icon(AppIcons.NoteEdit, contentDescription = null) },
                     label = { Text(stringResource(R.string.home_drafts)) },
                     selected = false,
                     onClick = onDrafts,
@@ -337,7 +320,7 @@ fun HomeDrawer(
             HorizontalDivider(Modifier.padding(horizontal = 28.dp))
             Column(Modifier.padding(vertical = 8.dp)) {
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                    icon = { Icon(AppIcons.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.home_settings)) },
                     selected = false,
                     onClick = onSettings,

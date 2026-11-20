@@ -1,5 +1,6 @@
 package com.kmail.thekami.ui.home
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
@@ -23,17 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Menu
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -156,7 +146,7 @@ fun HomeScreen(
                     ExtendedFloatingActionButton(
                         onClick = onCompose,
                         expanded = fabExpanded,
-                        icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
+                        icon = { Icon(AppIcons.Pencil, contentDescription = null) },
                         text = { Text(stringResource(R.string.home_compose)) },
                     )
                 }
@@ -279,7 +269,7 @@ private fun SearchPill(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onMenu) {
-                Icon(Icons.Rounded.Menu, contentDescription = stringResource(R.string.home_open_menu))
+                Icon(AppIcons.Menu, contentDescription = stringResource(R.string.home_open_menu))
             }
             BasicTextField(
                 value = query,
@@ -305,13 +295,13 @@ private fun SearchPill(
             )
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQuery("") }) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.home_clear_search))
+                    Icon(AppIcons.Close, contentDescription = stringResource(R.string.home_clear_search))
                 }
             } else {
-                Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(AppIcons.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                        Icon(AppIcons.More, contentDescription = stringResource(R.string.home_more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         SortOrder.entries.forEach { sort ->
@@ -323,7 +313,7 @@ private fun SearchPill(
                             }
                             DropdownMenuItem(
                                 text = { Text(stringResource(label)) },
-                                trailingIcon = { if (options.sort == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
+                                trailingIcon = { if (options.sort == sort) Icon(AppIcons.Check, contentDescription = null) },
                                 onClick = { onSort(sort); menuOpen = false },
                             )
                         }
@@ -363,7 +353,7 @@ private fun FilterChips(active: ListFilter, onFilter: (ListFilter) -> Unit) {
                 onClick = { onFilter(if (selected) ListFilter.ALL else filter) },
                 label = { Text(stringResource(label)) },
                 leadingIcon = if (selected) {
-                    { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    { Icon(AppIcons.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                 } else {
                     null
                 },
@@ -398,7 +388,7 @@ private fun EmptyMailbox(state: HomeUiState) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
-            if (filtering) Icons.Rounded.Search else Icons.Rounded.Inbox,
+            if (filtering) AppIcons.Search else AppIcons.Inbox,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.outline,
@@ -428,7 +418,7 @@ private fun Banner(text: String, onDismiss: (() -> Unit)?) {
             )
             if (onDismiss != null) {
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.compose_discard_keep))
+                    Icon(AppIcons.Close, contentDescription = stringResource(R.string.compose_discard_keep))
                 }
             }
         }
@@ -452,19 +442,19 @@ private fun SelectionBar(
         title = { Text(stringResource(R.string.home_selected, count)) },
         navigationIcon = {
             IconButton(onClick = onCancel) {
-                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.home_cancel_selection))
+                Icon(AppIcons.Close, contentDescription = stringResource(R.string.home_cancel_selection))
             }
         },
         actions = {
             IconButton(onClick = onArchive) {
-                Icon(Icons.Rounded.Archive, contentDescription = stringResource(R.string.home_archive))
+                Icon(AppIcons.Archive, contentDescription = stringResource(R.string.home_archive))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.home_delete))
+                Icon(AppIcons.Trash, contentDescription = stringResource(R.string.home_delete))
             }
             Box {
                 IconButton(onClick = { menu = true }) {
-                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.home_more_options))
+                    Icon(AppIcons.More, contentDescription = stringResource(R.string.home_more_options))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_mark_read)) }, onClick = { menu = false; onMarkRead(true) })
@@ -473,7 +463,7 @@ private fun SelectionBar(
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_unstar)) }, onClick = { menu = false; onStar(false) })
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.move_to)) },
-                        leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
+                        leadingIcon = { Icon(AppIcons.Folder, contentDescription = null) },
                         onClick = { menu = false; onMove() },
                     )
                     DropdownMenuItem(text = { Text(stringResource(R.string.home_select_all)) }, onClick = { menu = false; onSelectAll() })

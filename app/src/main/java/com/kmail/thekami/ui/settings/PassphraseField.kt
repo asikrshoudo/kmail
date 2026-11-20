@@ -1,11 +1,9 @@
 package com.kmail.thekami.ui.settings
 
+import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -47,7 +45,7 @@ internal fun PassphraseField(
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
                 Icon(
-                    imageVector = if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    imageVector = if (visible) AppIcons.EyeOff else AppIcons.Eye,
                     contentDescription = stringResource(if (visible) R.string.transfer_hide else R.string.transfer_show),
                 )
             }
