@@ -45,6 +45,10 @@ jobs:
 
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kmail-release.jks"
 
+      # The version is worked out here, from the newest release tag. version.properties is only a
+      # floor: raise it by hand to jump to a new minor or major. Nothing is committed back.
+      #   patch goes 0..10, then minor +1 and patch 0   (1.0.10 -> 1.1.0)
+      #   minor goes 0..99, then major +1               (1.99.10 -> 2.0.0)
       - name: Compute next version
         id: version
         env:
@@ -60,23 +64,27 @@ jobs:
             exit 1
           fi
 
-          # Highest version already released as a tag (empty if none).
+          # Versions already released as tags (empty if none).
           TAG_VERSIONS=$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/kmail-v" \
             --paginate --jq '.[].ref' \
             | sed 's#refs/tags/kmail-v##' \
             | grep -E "$RE" || true)
 
-          # Start from whichever is higher: the file or the latest tag.
+          # Start from whichever is higher: the file or the newest tag.
           BASE=$(printf '%s\n%s\n' "$FILE_VERSION" "$TAG_VERSIONS" | sed '/^$/d' | sort -V | tail -1)
           echo "Base version: $BASE"
 
           IFS=. read -r MAJOR MINOR PATCH <<< "$BASE"
           MAJOR=$((10#$MAJOR)); MINOR=$((10#$MINOR)); PATCH=$((10#$PATCH))
 
-          if (( PATCH >= 99 )); then
-            MAJOR=$((MAJOR + 1))
-            MINOR=0
-            PATCH=1
+          if (( PATCH >= 10 )); then
+            PATCH=0
+            if (( MINOR >= 99 )); then
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+            else
+              MINOR=$((MINOR + 1))
+            fi
           else
             PATCH=$((PATCH + 1))
           fi
@@ -135,7 +143,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub release
+      - name: Publish GitHub release (APK and AAB)
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -165,22 +173,3 @@ jobs:
             "$AAB_NAME"
 
           echo "Successfully published Kmail v${VERSION_NAME}"
-
-      - name: Commit version bump
-        env:
-          VERSION_NAME: ${{ steps.version.outputs.name }}
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git fetch origin main
-          git checkout -f -B main origin/main
-
-          echo "VERSION_NAME=${VERSION_NAME}" > version.properties
-          git add version.properties
-          git diff --cached --quiet && exit 0
-
-          git commit -m "chore: release v${VERSION_NAME} [skip ci]"
-          git push origin main

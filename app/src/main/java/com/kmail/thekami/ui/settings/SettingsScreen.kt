@@ -1,9 +1,5 @@
 package com.kmail.thekami.ui.settings
 
-import com.kmail.thekami.ui.components.AppIcons
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
@@ -50,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +59,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
 import com.kmail.thekami.data.security.PinVerify
 import com.kmail.thekami.domain.model.Account
+import com.kmail.thekami.ui.components.AppIcons
+import com.kmail.thekami.ui.components.HOW_TO_USE_URL
+import com.kmail.thekami.ui.components.PRIVACY_URL
+import com.kmail.thekami.ui.components.openLinkAction
 import com.kmail.thekami.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -86,11 +85,11 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     vm: SettingsViewModel = hiltViewModel(),
 ) {
-       val accounts by vm.accounts.collectAsStateWithLifecycle()
+    val accounts by vm.accounts.collectAsStateWithLifecycle()
     val lock by vm.lock.collectAsStateWithLifecycle()
     val appearance by vm.appearance.collectAsStateWithLifecycle()
     val sync by vm.sync.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val openLink = openLinkAction()
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     var dialogError by remember { mutableStateOf<String?>(null) }
@@ -307,44 +306,9 @@ fun SettingsScreen(
                     }
 
                     SettingsPage.About.name -> {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    try {
-                                        context.startActivity(
-                                            Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.settings_privacy_url))),
-                                        )
-                                    } catch (e: ActivityNotFoundException) {
-                                        // no browser installed
-                                    }
-                                }
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(R.string.settings_privacy_policy),
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Icon(
-                                AppIcons.OpenInNew,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Column(
-                            Modifier.fillMaxWidth().padding(vertical = 40.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(stringResource(R.string.settings_brand), style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                stringResource(R.string.settings_version, vm.versionName),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
+                        LinkRow(stringResource(R.string.settings_privacy_policy)) { openLink(PRIVACY_URL) }
+                        LinkRow(stringResource(R.string.legal_how_to_use)) { openLink(HOW_TO_USE_URL) }
+                        VersionFooter(vm.versionName)
                     }
 
                     else -> {
@@ -376,6 +340,7 @@ fun SettingsScreen(
                         NavRow(AppIcons.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }
                         NavDivider()
                         NavRow(AppIcons.Info, stringResource(R.string.settings_about), null) { open(SettingsPage.About) }
+                        VersionFooter(vm.versionName)
                     }
                 }
             }
@@ -460,6 +425,35 @@ fun SettingsScreen(
         )
         is SettingsDialog.Transfer -> TransferExportDialog(accounts = accounts.orEmpty(), preselected = d.preselected, onDismiss = { dialog = null })
         null -> Unit
+    }
+}
+
+/** Brand name and app version, as small centered text. */
+@Composable
+private fun VersionFooter(versionName: String) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.settings_brand), style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(R.string.settings_version, versionName),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** A row that opens a web page. */
+@Composable
+private fun LinkRow(title: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Icon(AppIcons.OpenInNew, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -609,6 +603,7 @@ private fun ActionRow(title: String, subtitle: String?, action: String, onAction
         TextButton(onClick = onAction) { Text(action) }
     }
 }
+
 @Composable
 private fun ChipGroup(@StringRes title: Int, content: @Composable () -> Unit) {
     Column(
