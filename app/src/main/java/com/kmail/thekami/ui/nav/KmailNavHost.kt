@@ -25,6 +25,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.kmail.thekami.R
+import com.kmail.thekami.ui.theme.rememberReducedMotion
 import com.kmail.thekami.data.transfer.TransferText
 import com.kmail.thekami.ui.setup.ScanScreen
 import com.kmail.thekami.ui.setup.TransferImportHost
@@ -63,16 +64,29 @@ fun KmailNavHost(
         return
     }
 
+    val reduceMotion = rememberReducedMotion()
     NavHost(
         navController = navController,
         startDestination = startRoute,
-        enterTransition = KmailTransitions.enter,
-        exitTransition = KmailTransitions.exit,
-        popEnterTransition = KmailTransitions.popEnter,
-        popExitTransition = KmailTransitions.popExit,
+        enterTransition = KmailTransitions.enter(reduceMotion),
+        exitTransition = KmailTransitions.exit(reduceMotion),
+        popEnterTransition = KmailTransitions.popEnter(reduceMotion),
+        popExitTransition = KmailTransitions.popExit(reduceMotion),
     ) {
         composable(Routes.WELCOME) {
-            WelcomeScreen(onGetStarted = { navController.navigate(Routes.CREDENTIALS) })
+            val context = LocalContext.current
+            val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) importVm.loadFile(context.contentResolver, uri)
+            }
+            WelcomeScreen(
+                onGetStarted = { navController.navigate(Routes.CREDENTIALS) },
+                onScanQr = { navController.navigate(Routes.SCAN) },
+                onImportFile = { pickFile.launch(arrayOf("*/*")) },
+            )
+            TransferImportHost(
+                importVm = importVm,
+                onOpenInbox = { navController.navigate(Routes.HOME) { popUpTo(navController.graph.id) { inclusive = true } } },
+            )
         }
 
         composable(Routes.CREDENTIALS) {

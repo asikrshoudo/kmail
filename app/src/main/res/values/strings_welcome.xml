@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_headline">All your email, in one calm inbox</string>
+    <string name="welcome_feature_any_title">Any email provider</string>
+    <string name="welcome_feature_any_body">Works with every provider that supports IMAP and SMTP.</string>
+    <string name="welcome_feature_private_title">Private by design</string>
+    <string name="welcome_feature_private_body">Your passwords are stored encrypted on this device.</string>
+    <string name="welcome_feature_move_title">Move in seconds</string>
+    <string name="welcome_feature_move_body">Switch phones with a QR code or an encrypted file.</string>
+    <string name="welcome_other_device">Already set up on another device?</string>
+    <string name="welcome_scan_qr">Scan QR code</string>
+    <string name="welcome_import_file">Import file</string>
+</resources>
