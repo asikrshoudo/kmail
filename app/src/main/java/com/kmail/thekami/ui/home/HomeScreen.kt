@@ -1,8 +1,18 @@
 package com.kmail.thekami.ui.home
 
-import com.kmail.thekami.ui.components.AppIcons
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +30,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -58,19 +69,27 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmail.thekami.R
 import com.kmail.thekami.data.db.FolderEntity
+import com.kmail.thekami.ui.components.AppIcons
 import com.kmail.thekami.ui.setup.messageRes
 import kotlinx.coroutines.launch
+
+/** What the list area is showing. Changes between these cross-fade. */
+private enum class ListKind { Loading, Empty, Messages }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -121,6 +140,11 @@ fun HomeScreen(
     }
 
     val mailboxName = mailboxName(state)
+    val listKind = when {
+        state.messages.isEmpty() && state.refreshing -> ListKind.Loading
+        state.messages.isEmpty() -> ListKind.Empty
+        else -> ListKind.Messages
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -142,7 +166,11 @@ fun HomeScreen(
         Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             floatingActionButton = {
-                if (!selecting) {
+                AnimatedVisibility(
+                    visible = !selecting,
+                    enter = scaleIn(spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                    exit = scaleOut(tween(150)) + fadeOut(tween(150)),
+                ) {
                     ExtendedFloatingActionButton(
                         onClick = onCompose,
                         expanded = fabExpanded,
@@ -152,38 +180,48 @@ fun HomeScreen(
                 }
             },
             topBar = {
-                if (selecting) {
-                    SelectionBar(
-                        count = state.selectedIds.size,
-                        onCancel = vm::clearSelection,
-                        onArchive = vm::archive,
-                        onDelete = vm::delete,
-                        onMarkRead = vm::markRead,
-                        onStar = vm::setStarred,
-                        onSelectAll = vm::selectAll,
-                        onMove = { showMove = true },
-                    )
-                } else {
-                    Column(Modifier.statusBarsPadding()) {
-                        SearchPill(
-                            query = state.query,
-                            placeholder = stringResource(R.string.home_search_in, mailboxName),
-                            options = state.options,
-                            onQuery = vm::onQuery,
-                            onMenu = { scope.launch { drawerState.open() } },
-                            onSort = vm::setSort,
-                            onRefresh = { vm.refresh(manual = true) },
+                Crossfade(targetState = selecting, animationSpec = tween(180), label = "top-bar") { isSelecting ->
+                    if (isSelecting) {
+                        SelectionBar(
+                            count = state.selectedIds.size,
+                            onCancel = vm::clearSelection,
+                            onArchive = vm::archive,
+                            onDelete = vm::delete,
+                            onMarkRead = vm::markRead,
+                            onStar = vm::setStarred,
                             onSelectAll = vm::selectAll,
-                            onAddAccount = onAddAccount,
+                            onMove = { showMove = true },
                         )
-                        FilterChips(state.options.filter, vm::setFilter)
+                    } else {
+                        Column(Modifier.statusBarsPadding()) {
+                            SearchPill(
+                                query = state.query,
+                                placeholder = stringResource(R.string.home_search_in, mailboxName),
+                                options = state.options,
+                                onQuery = vm::onQuery,
+                                onMenu = { scope.launch { drawerState.open() } },
+                                onSort = vm::setSort,
+                                onRefresh = { vm.refresh(manual = true) },
+                                onSelectAll = vm::selectAll,
+                                onAddAccount = onAddAccount,
+                            )
+                            FilterChips(state.options.filter, vm::setFilter)
+                        }
                     }
                 }
             },
         ) { padding ->
             Column(Modifier.padding(padding).fillMaxSize()) {
-                // Every sync, automatic or not, shows this thin bar.
-                if (state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth()) else Spacer(Modifier.height(4.dp))
+                // Every sync, automatic or not, shows this thin bar. It fades in and out and never moves the list.
+                Box(Modifier.fillMaxWidth().height(4.dp)) {
+                    AnimatedVisibility(
+                        visible = state.refreshing,
+                        enter = fadeIn(tween(200)),
+                        exit = fadeOut(tween(300)),
+                    ) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
+                }
                 state.error?.let { error ->
                     Banner(stringResource(R.string.home_sync_error, stringResource(error.messageRes())), null)
                 }
@@ -195,38 +233,48 @@ fun HomeScreen(
                     onRefresh = { vm.refresh(manual = true) },
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
-                    when {
-                        state.messages.isEmpty() && state.refreshing -> SkeletonList()
-                        state.messages.isEmpty() -> EmptyMailbox(state)
-                        else -> {
-                            val entries = remember(state.messages, state.options.sort) {
-                                buildEntries(state.messages, state.options.sort, System.currentTimeMillis())
-                            }
-                            LazyColumn(
-                                Modifier.fillMaxSize(),
-                                state = listState,
-                                contentPadding = PaddingValues(bottom = 96.dp),
-                            ) {
-                                items(
-                                    entries,
-                                    key = { if (it is ListEntry.Header) "h-${it.bucket.name}" else (it as ListEntry.Row).item.id },
-                                ) { entry ->
-                                    when (entry) {
-                                        is ListEntry.Header -> BucketHeader(entry.bucket, Modifier.animateItem())
-                                        is ListEntry.Row -> {
-                                            val item = entry.item
-                                            SwipeableMessageRow(
-                                                modifier = Modifier.animateItem(),
-                                                item = item,
-                                                selected = item.id in state.selectedIds,
-                                                selecting = selecting,
-                                                showAccountDot = state.sidebar.size > 1,
-                                                onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
-                                                onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); vm.toggleSelect(item.id) },
-                                                onToggleStar = { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleStar(item.id, !item.isStarred) },
-                                                onArchive = { vm.archiveOne(item.id) },
-                                                onDelete = { vm.deleteOne(item.id) },
-                                            )
+                    Crossfade(targetState = listKind, animationSpec = tween(220), label = "list-kind") { kind ->
+                        when (kind) {
+                            ListKind.Loading -> SkeletonList()
+                            ListKind.Empty -> EmptyMailbox(state)
+                            ListKind.Messages -> {
+                                val entries = remember(state.messages, state.options.sort) {
+                                    buildEntries(state.messages, state.options.sort, System.currentTimeMillis())
+                                }
+                                LazyColumn(
+                                    Modifier.fillMaxSize(),
+                                    state = listState,
+                                    contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp),
+                                ) {
+                                    items(
+                                        entries,
+                                        key = { if (it is ListEntry.Header) "h-${it.bucket.name}" else (it as ListEntry.Row).item.id },
+                                    ) { entry ->
+                                        val motion = Modifier.animateItem(
+                                            fadeInSpec = tween(240),
+                                            placementSpec = spring(
+                                                stiffness = Spring.StiffnessMediumLow,
+                                                visibilityThreshold = IntOffset.VisibilityThreshold,
+                                            ),
+                                            fadeOutSpec = tween(160),
+                                        )
+                                        when (entry) {
+                                            is ListEntry.Header -> BucketHeader(entry.bucket, motion)
+                                            is ListEntry.Row -> {
+                                                val item = entry.item
+                                                SwipeableMessageRow(
+                                                    modifier = motion,
+                                                    item = item,
+                                                    selected = item.id in state.selectedIds,
+                                                    selecting = selecting,
+                                                    showAccountDot = state.sidebar.size > 1,
+                                                    onClick = { if (selecting) vm.toggleSelect(item.id) else onOpenMessage(item.id) },
+                                                    onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); vm.toggleSelect(item.id) },
+                                                    onToggleStar = { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleStar(item.id, !item.isStarred) },
+                                                    onArchive = { vm.archiveOne(item.id) },
+                                                    onDelete = { vm.deleteOne(item.id) },
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -336,6 +384,7 @@ private fun SearchPill(
         }
     }
 }
+
 @Composable
 private fun FilterChips(active: ListFilter, onFilter: (ListFilter) -> Unit) {
     Row(
@@ -362,6 +411,7 @@ private fun FilterChips(active: ListFilter, onFilter: (ListFilter) -> Unit) {
     }
 }
 
+/** A quiet date label above each group of messages. */
 @Composable
 private fun BucketHeader(bucket: DateBucket, modifier: Modifier = Modifier) {
     Text(
@@ -374,35 +424,53 @@ private fun BucketHeader(bucket: DateBucket, modifier: Modifier = Modifier) {
             },
         ),
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp),
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(start = 24.dp, top = 20.dp, bottom = 6.dp),
     )
 }
 
 @Composable
 private fun EmptyMailbox(state: HomeUiState) {
     val filtering = state.query.isNotBlank() || state.options.filter != ListFilter.ALL
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            if (filtering) AppIcons.Search else AppIcons.Inbox,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.outline,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(if (filtering) R.string.empty_nomatch_title else R.string.empty_caught_up_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            stringResource(if (filtering) R.string.empty_nomatch_text else R.string.empty_caught_up_text),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        AnimatedVisibility(
+            visible = shown,
+            enter = fadeIn(tween(420)) + slideInVertically(tween(420)) { it / 10 },
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.size(96.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (filtering) AppIcons.Search else AppIcons.Inbox,
+                        contentDescription = null,
+                        modifier = Modifier.size(44.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    stringResource(if (filtering) R.string.empty_nomatch_title else R.string.empty_caught_up_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stringResource(if (filtering) R.string.empty_nomatch_text else R.string.empty_caught_up_text),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
 }
 
