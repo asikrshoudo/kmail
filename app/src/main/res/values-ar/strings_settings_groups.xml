@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_group_mail">البريد</string>
+    <string name="settings_group_personalize">التخصيص</string>
+    <string name="settings_group_security">الأمان</string>
+    <string name="settings_group_about">حول</string>
+</resources>

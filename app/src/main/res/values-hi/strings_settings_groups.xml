@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_group_mail">मेल</string>
+    <string name="settings_group_personalize">पर्सनलाइज़ करें</string>
+    <string name="settings_group_security">सुरक्षा</string>
+    <string name="settings_group_about">जानकारी</string>
+</resources>

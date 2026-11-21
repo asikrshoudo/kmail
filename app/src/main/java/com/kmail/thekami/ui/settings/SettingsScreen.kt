@@ -63,7 +63,6 @@ import com.kmail.thekami.ui.components.AppIcons
 import com.kmail.thekami.ui.components.HOW_TO_USE_URL
 import com.kmail.thekami.ui.components.PRIVACY_URL
 import com.kmail.thekami.ui.components.openLinkAction
-import com.kmail.thekami.ui.support.SupportSection
 import com.kmail.thekami.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -312,38 +311,18 @@ fun SettingsScreen(
                         VersionFooter(vm.versionName)
                     }
 
-                    else -> {
-                        val open = { p: SettingsPage -> pageName = p.name }
-                        NavRow(
-                            AppIcons.AccountCircle,
-                            stringResource(R.string.settings_accounts),
-                            accounts.orEmpty().joinToString { it.emailAddress }.ifEmpty { null },
-                        ) { open(SettingsPage.Accounts) }
-                        NavDivider()
-                        NavRow(AppIcons.NoteEdit, stringResource(R.string.settings_signature_title), null) {
-                            open(SettingsPage.Signature)
-                        }
-                        NavDivider()
-                        NavRow(AppIcons.Palette, stringResource(R.string.settings_appearance), themeSummary) {
-                            open(SettingsPage.Appearance)
-                        }
-                        NavDivider()
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            NavRow(
-                                AppIcons.Language,
-                                stringResource(R.string.settings_language),
-                                currentLanguageLabel(),
-                            ) { open(SettingsPage.Language) }
-                            NavDivider()
-                        }
-                        NavRow(AppIcons.Sync, stringResource(R.string.settings_sync), null) { open(SettingsPage.Sync) }
-                        NavDivider()
-                        NavRow(AppIcons.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }
-                        NavDivider()
-                        NavRow(AppIcons.Info, stringResource(R.string.settings_about), null) { open(SettingsPage.About) }
-                        SupportSection()
-                        VersionFooter(vm.versionName)
-                    }
+                    else -> SettingsHub(
+                        accountsSummary = accounts.orEmpty().joinToString { it.emailAddress }.ifEmpty { null },
+                        themeSummary = themeSummary,
+                        versionName = vm.versionName,
+                        onAccounts = { pageName = SettingsPage.Accounts.name },
+                        onSignature = { pageName = SettingsPage.Signature.name },
+                        onAppearance = { pageName = SettingsPage.Appearance.name },
+                        onLanguage = { pageName = SettingsPage.Language.name },
+                        onSync = { pageName = SettingsPage.Sync.name },
+                        onPrivacy = { pageName = SettingsPage.Privacy.name },
+                        onAbout = { pageName = SettingsPage.About.name },
+                    )
                 }
             }
         }

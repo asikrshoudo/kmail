@@ -10,7 +10,7 @@ import android.os.Build
 const val GITHUB_URL = "https://github.com/thekami-co/kmail"
 
 /** Donation page. While this is empty the "Support this project" row stays hidden. */
-const val DONATE_URL = "https://www.supportkori.com/thekamiofficial"
+const val DONATE_URL = "https://www.supportkori.com/thekami"
 
 private const val PLAY_STORE_PACKAGE = "com.android.vending"
 

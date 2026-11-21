@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_group_mail">E-Mail</string>
+    <string name="settings_group_personalize">Anpassen</string>
+    <string name="settings_group_security">Sicherheit</string>
+    <string name="settings_group_about">Info</string>
+</resources>
