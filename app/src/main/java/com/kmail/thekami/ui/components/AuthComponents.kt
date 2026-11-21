@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.dp
  * One frame for every setup screen. The wordmark and an optional action sit on top, the form
  * scrolls, and the main action stays pinned at the bottom above the keyboard. Wide landscape
  * screens put the header on the left and the form on the right.
+ *
+ * With [centered] the header and form sit in the middle of the free space, and scroll only when
+ * the screen is too small to show them (small phones, open keyboard).
  */
 @Composable
 internal fun AuthLayout(
@@ -49,6 +52,7 @@ internal fun AuthLayout(
     modifier: Modifier = Modifier,
     overline: String? = null,
     subtitle: String? = null,
+    centered: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {},
     bottomBar: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
@@ -81,7 +85,11 @@ internal fun AuthLayout(
                                 .fillMaxWidth()
                                 .verticalScroll(rememberScrollState())
                                 .padding(vertical = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = if (centered) {
+                                Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+                            } else {
+                                Arrangement.spacedBy(16.dp)
+                            },
                         ) { content() }
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
@@ -96,17 +104,23 @@ internal fun AuthLayout(
                     modifier = Modifier.widthIn(max = 480.dp).fillMaxSize().padding(horizontal = 24.dp),
                 ) {
                     TopBar(actions)
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Spacer(Modifier.size(16.dp))
-                        AuthHeader(overline, title, subtitle)
-                        Spacer(Modifier.size(8.dp))
-                        content()
+                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                        // The free height. The form is at least this tall so it can sit in the middle.
+                        val viewport = maxHeight
+                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().heightIn(min = viewport),
+                                verticalArrangement = Arrangement.spacedBy(
+                                    16.dp,
+                                    if (centered) Alignment.CenterVertically else Alignment.Top,
+                                ),
+                            ) {
+                                if (!centered) Spacer(Modifier.size(16.dp))
+                                AuthHeader(overline, title, subtitle)
+                                Spacer(Modifier.size(8.dp))
+                                content()
+                            }
+                        }
                     }
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),

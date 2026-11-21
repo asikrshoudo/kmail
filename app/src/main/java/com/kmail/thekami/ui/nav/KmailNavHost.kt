@@ -46,7 +46,6 @@ import com.kmail.thekami.ui.setup.CredentialsScreen
 import com.kmail.thekami.ui.setup.ServerScreen
 import com.kmail.thekami.ui.setup.ServerSide
 import com.kmail.thekami.ui.setup.SetupViewModel
-import com.kmail.thekami.ui.setup.WelcomeScreen
 import com.kmail.thekami.ui.setup.hintRes
 
 @Composable
@@ -67,27 +66,12 @@ fun KmailNavHost(
     val reduceMotion = rememberReducedMotion()
     NavHost(
         navController = navController,
-        startDestination = startRoute,
+        startDestination = if (startRoute == Routes.WELCOME) Routes.CREDENTIALS else startRoute,
         enterTransition = KmailTransitions.enter(reduceMotion),
         exitTransition = KmailTransitions.exit(reduceMotion),
         popEnterTransition = KmailTransitions.popEnter(reduceMotion),
         popExitTransition = KmailTransitions.popExit(reduceMotion),
     ) {
-        composable(Routes.WELCOME) {
-            val context = LocalContext.current
-            val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                if (uri != null) importVm.loadFile(context.contentResolver, uri)
-            }
-            WelcomeScreen(
-                onGetStarted = { navController.navigate(Routes.CREDENTIALS) },
-                onScanQr = { navController.navigate(Routes.SCAN) },
-                onImportFile = { pickFile.launch(arrayOf("*/*")) },
-            )
-            TransferImportHost(
-                importVm = importVm,
-                onOpenInbox = { navController.navigate(Routes.HOME) { popUpTo(navController.graph.id) { inclusive = true } } },
-            )
-        }
 
         composable(Routes.CREDENTIALS) {
             val state by vm.credentials.collectAsStateWithLifecycle()
@@ -233,7 +217,8 @@ fun KmailNavHost(
                     navController.navigate(Routes.CREDENTIALS)
                 },
                 onNoAccounts = {
-                    navController.navigate(Routes.WELCOME) {
+                    vm.startNewAccount()
+                    navController.navigate(Routes.CREDENTIALS) {
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
                 },

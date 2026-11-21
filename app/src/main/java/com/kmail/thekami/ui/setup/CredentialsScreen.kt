@@ -1,6 +1,5 @@
 package com.kmail.thekami.ui.setup
 
-import com.kmail.thekami.ui.components.AppIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,10 +29,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.kmail.thekami.R
+import com.kmail.thekami.ui.components.AppIcons
 import com.kmail.thekami.ui.components.AuthLayout
 import com.kmail.thekami.ui.components.AuthPrimaryButton
 import com.kmail.thekami.ui.components.AuthTextField
 import com.kmail.thekami.ui.components.HOW_TO_USE_URL
+import com.kmail.thekami.ui.components.LegalLinks
 import com.kmail.thekami.ui.components.openLinkAction
 
 @Composable
@@ -54,6 +55,7 @@ fun CredentialsScreen(
         title = stringResource(R.string.credentials_title),
         subtitle = stringResource(R.string.credentials_subtitle),
         modifier = modifier,
+        centered = true,
         actions = {
             IconButton(onClick = { showHelp = true }) {
                 Icon(
@@ -77,6 +79,7 @@ fun CredentialsScreen(
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
+            LegalLinks()
         },
     ) {
         AuthTextField(
