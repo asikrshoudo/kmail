@@ -63,6 +63,7 @@ import com.kmail.thekami.ui.components.AppIcons
 import com.kmail.thekami.ui.components.HOW_TO_USE_URL
 import com.kmail.thekami.ui.components.PRIVACY_URL
 import com.kmail.thekami.ui.components.openLinkAction
+import com.kmail.thekami.ui.support.SupportSection
 import com.kmail.thekami.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -340,6 +341,7 @@ fun SettingsScreen(
                         NavRow(AppIcons.Lock, stringResource(R.string.settings_privacy), null) { open(SettingsPage.Privacy) }
                         NavDivider()
                         NavRow(AppIcons.Info, stringResource(R.string.settings_about), null) { open(SettingsPage.About) }
+                        SupportSection()
                         VersionFooter(vm.versionName)
                     }
                 }

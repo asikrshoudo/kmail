@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="support_header">Support Kmail</string>
+    <string name="support_rate">Rate Kmail on Google Play</string>
+    <string name="support_rate_desc">Your rating helps other people find the app</string>
+    <string name="support_star">Star on GitHub</string>
+    <string name="support_star_desc">A star helps others discover Kmail</string>
+    <string name="support_donate">Support this project</string>
+    <string name="support_donate_desc">Help keep Kmail free and independent</string>
+    <string name="rate_title">Enjoying Kmail?</string>
+    <string name="rate_message">If Kmail is useful to you, a quick rating on Google Play helps a lot.</string>
+    <string name="rate_yes">Rate now</string>
+    <string name="rate_later">Later</string>
+    <string name="rate_never">No thanks</string>
+</resources>
