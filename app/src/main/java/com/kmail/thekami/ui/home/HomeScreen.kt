@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -70,6 +72,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -211,15 +214,16 @@ fun HomeScreen(
                 }
             },
         ) { padding ->
+            val syncAlpha by animateFloatAsState(
+                targetValue = if (state.refreshing) 1f else 0f,
+                animationSpec = tween(250),
+                label = "sync-alpha",
+            )
             Column(Modifier.padding(padding).fillMaxSize()) {
                 // Every sync, automatic or not, shows this thin bar. It fades in and out and never moves the list.
                 Box(Modifier.fillMaxWidth().height(4.dp)) {
-                    AnimatedVisibility(
-                        visible = state.refreshing,
-                        enter = fadeIn(tween(200)),
-                        exit = fadeOut(tween(300)),
-                    ) {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (syncAlpha > 0.01f) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth().alpha(syncAlpha))
                     }
                 }
                 state.error?.let { error ->
